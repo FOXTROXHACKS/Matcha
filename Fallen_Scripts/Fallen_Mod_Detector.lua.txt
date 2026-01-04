@@ -1,0 +1,28 @@
+local watch = {}
+
+do
+    local data = game:HttpGet("https://raw.githubusercontent.com/s2rce/idk/main/names.lua", true)
+    for name in data:gmatch('"([^"]+)"') do
+        watch[name] = true
+    end
+end
+
+local function scan()
+    local found = {}
+
+    for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+        if watch[p.Name] then
+            found[#found + 1] = p.Name
+        end
+    end
+
+    if #found > 0 then
+        table.sort(found)
+        notify("MOD DETECTOR", #found .. " online: " .. table.concat(found, ", "), 10)
+    end
+end
+
+while true do
+    scan()
+    wait(10)
+end
