@@ -1,4 +1,5 @@
 --CONFIGURACION
+--[[
 _G.ESP_Config = {
     Stone = true,
     Metal = false,
@@ -6,7 +7,7 @@ _G.ESP_Config = {
     BoxSize = 10,
     MaxDist = 200
 }
-
+]]
 --Logs
 local sys = "[SYS]: "
 local cfg = _G.ESP_Config
@@ -128,3 +129,4 @@ while true do
         end
     end
 end
+
