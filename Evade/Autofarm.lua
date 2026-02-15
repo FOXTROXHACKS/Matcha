@@ -16,7 +16,7 @@ local esperandoTickets = false
 local recolectando = false
 local avisoBackupEnviado = false
 print("------------------------------------------")
-print("--- TICKET FARM - V1.2")
+print("--- TICKET FARM - V1.3")
 print("------------------------------------------")
 
 task.spawn(function()
