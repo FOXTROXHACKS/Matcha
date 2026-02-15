@@ -1,6 +1,7 @@
---[[V1.2
+--[[V1.3
 + fixed mapchange crashing the script
 + upgraded safe method
++ Fixed OUtput spam when using invis part
 ]]
 --[[
 local Collect = 0.3 
@@ -13,7 +14,7 @@ local SafeZoneCD = 0.1
 local player = game.Players.LocalPlayer
 local esperandoTickets = false
 local recolectando = false
-
+local avisoBackupEnviado = false
 print("------------------------------------------")
 print("--- TICKET FARM - V1.2")
 print("------------------------------------------")
@@ -67,13 +68,20 @@ task.spawn(function()
                 local dest = safeZonesFolder and (safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChild("Part") or safeZonesFolder:FindFirstChildWhichIsA("BasePart"))
                 
                 if not dest and invisPartsFolder then
-                    print("No Safe Zone Found, using invis part.")
+                    if not avisoBackupEnviado then
+                        print("No Safe Zone Found, using invis part.")
+                        avisoBackupEnviado = true
+                    end
                     dest = invisPartsFolder:FindFirstChild("Part")
                 end
                 
                 if dest then
                     hrp.Position = dest.Position + Vector3.new(0, 5, 0)
                     hrp.Velocity = Vector3.new(0, 0, 0)
+
+                    if safeZonesFolder and safeZonesFolder:FindFirstChildWhichIsA("BasePart") then
+                        avisoBackupEnviado = false
+                    end
                 end
             end
         end
