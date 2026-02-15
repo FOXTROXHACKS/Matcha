@@ -6,22 +6,23 @@ local SafeZoneCD = 4
 ]]
 
 local player = game.Players.LocalPlayer
-local ticketsFolder = workspace.Game.Effects.Tickets
-local safeZonesFolder = workspace.Game.Map.SafeZones -- Carpeta que contiene las piezas
 local esperandoTickets = false
 local recolectando = false
 
 print("------------------------------------------")
 print("--- TICKET FARM")
-print("--- Usando Position en SafeZone.SafeZone")
 print("------------------------------------------")
 
 task.spawn(function()
     while true do
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        
-        if hrp then
+
+        local gameFolder = workspace:FindFirstChild("Game")
+        local ticketsFolder = gameFolder and gameFolder:FindFirstChild("Effects") and gameFolder.Effects:FindFirstChild("Tickets")
+        local safeZonesFolder = gameFolder and gameFolder:FindFirstChild("Map") and gameFolder.Map:FindFirstChild("SafeZones")
+
+        if hrp and ticketsFolder and safeZonesFolder then
             local allTickets = ticketsFolder:GetChildren()
             local currentTickets = {}
 
@@ -43,7 +44,7 @@ task.spawn(function()
                     pcall(function()
                         if target and target.Parent then
                             hrp.Position = target.Position + Vector3.new(0, 2, 0)
-                            task.wait(Cooldown)
+                            task.wait(Collect)
                         end
                     end)
                 end
@@ -55,16 +56,22 @@ task.spawn(function()
                 end
 
                 local dest = safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChildWhichIsA("BasePart")
-                
+    
                 if dest then
                     pcall(function()
-                        hrp.Position = dest.Position + Vector3.new(0, 5, 0)
+                        local freshPos = dest.Position
+                        hrp.Position = freshPos + Vector3.new(0, 5, 0)
                     end)
                 end
                 
                 task.wait(SafeZoneCD)
             end
+        else
+            if not esperandoTickets then
+                print("--- Waiting for folders......")
+                esperandoTickets = true
+            end
         end
-        task.wait(ScanCooldown)
+                task.wait(ScanCooldown)
     end
 end)
