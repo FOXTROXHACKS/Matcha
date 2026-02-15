@@ -15,7 +15,7 @@ local esperandoTickets = false
 local recolectando = false
 
 print("------------------------------------------")
-print("--- TICKET FARM")
+print("--- TICKET FARM - V1.2")
 print("------------------------------------------")
 
 task.spawn(function()
