@@ -1,12 +1,14 @@
---[[V1.1
+--[[V1.2
 + fixed mapchange crashing the script
 + upgraded safe method
 ]]
 --[[
 local Collect = 0.3 
 local ScanCooldown = 0.5
-local SafeZoneCD = 4
+local SafeZoneCD = 0.1 -- Bajamos esto para que el "anclaje" sea constante
 ]]
+-- CONFIGURACIÓN
+
 
 local player = game.Players.LocalPlayer
 local esperandoTickets = false
@@ -20,15 +22,16 @@ task.spawn(function()
     while true do
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
-
+        
         local gameFolder = workspace:FindFirstChild("Game")
+        local map = gameFolder and gameFolder:FindFirstChild("Map")
         local effects = gameFolder and gameFolder:FindFirstChild("Effects")
         local ticketsFolder = effects and effects:FindFirstChild("Tickets")
         
-        local map = gameFolder and gameFolder:FindFirstChild("Map")
         local safeZonesFolder = map and map:FindFirstChild("SafeZones")
+        local invisPartsFolder = map and map:FindFirstChild("InvisParts")
 
-        if hrp and ticketsFolder and safeZonesFolder then
+        if hrp and ticketsFolder then
             local allTickets = ticketsFolder:GetChildren()
             local currentTickets = {}
 
@@ -56,29 +59,23 @@ task.spawn(function()
                 end
             else
                 if not esperandoTickets then
-                    print("--- Collected, going to Safe Zone...")
+                    print("--- Going to Safe Zone (Static Mode)...")
                     esperandoTickets = true
                     recolectando = false
                 end
-                    
-                local dest = safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChildWhichIsA("BasePart") or safeZonesFolder:FindFirstChildWhichIsA("Part")
+
+                local dest = safeZonesFolder and (safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChild("Part") or safeZonesFolder:FindFirstChildWhichIsA("BasePart"))
                 
-                if dest then
-                    pcall(function()
-                        hrp.Position = dest.Position + Vector3.new(0, 5, 0)
-                    end)
+                if not dest and invisPartsFolder then
+                    dest = invisPartsFolder:FindFirstChild("Part")
                 end
                 
-                task.wait(SafeZoneCD)
+                if dest then
+                    hrp.Position = dest.Position + Vector3.new(0, 5, 0)
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
             end
-        else
-            if not esperandoTickets then
-                print("--- [SYSTEM]: Map not detected, waiting for folders...")
-                esperandoTickets = true
-            end
-            task.wait(1)
         end
-        
-        task.wait(ScanCooldown)
+        task.wait(SafeZoneCD)
     end
 end)
