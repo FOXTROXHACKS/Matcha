@@ -1,55 +1,51 @@
---[[V1.3
-+ fixed mapchange crashing the script
-+ upgraded safe method
-+ Fixed OUtput spam when using invis part
+--[[V1.4
++ Removed SafeZone search by ingame part
++ Changed safezone to now just teleport you up the map
++ Fixed Mapchange crashing logic
 ]]
+
 --[[
 local Collect = 0.3 
 local ScanCooldown = 0.5
-local SafeZoneCD = 0.1
+local SafeZoneCD = 0.1 -- Mantiene el personaje anclado en la posición fija
 ]]
--- CONFIGURACIÓN
-
+local FixedSafePos = Vector3.new(-7.570, 380.103, 86.898)
 
 local player = game.Players.LocalPlayer
 local esperandoTickets = false
 local recolectando = false
-local avisoBackupEnviado = false
+
 print("------------------------------------------")
-print("--- TICKET FARM - V1.3")
+print("--- TICKET FARM - V1.4 [Upgraded safe zone]")
 print("------------------------------------------")
 
 task.spawn(function()
     while true do
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        
+
         local gameFolder = workspace:FindFirstChild("Game")
-        local map = gameFolder and gameFolder:FindFirstChild("Map")
         local effects = gameFolder and gameFolder:FindFirstChild("Effects")
         local ticketsFolder = effects and effects:FindFirstChild("Tickets")
-        
-        local safeZonesFolder = map and map:FindFirstChild("SafeZones")
-        local invisPartsFolder = map and map:FindFirstChild("InvisParts")
 
-        if hrp and ticketsFolder then
-            local allTickets = ticketsFolder:GetChildren()
+        if hrp then
             local currentTickets = {}
 
-            for _, t in ipairs(allTickets) do
-                local mover = t:FindFirstChild("Mover")
-                if mover and mover:IsA("BasePart") then
-                    table.insert(currentTickets, mover)
+            if ticketsFolder then
+                local allTickets = ticketsFolder:GetChildren()
+                for _, t in ipairs(allTickets) do
+                    local mover = t:FindFirstChild("Mover")
+                    if mover and mover:IsA("BasePart") then
+                        table.insert(currentTickets, mover)
+                    end
                 end
             end
-
             if #currentTickets > 0 then
                 if not recolectando then
                     print("--- Tickets found!")
                     recolectando = true
                     esperandoTickets = false
                 end
-
                 for _, target in ipairs(currentTickets) do
                     pcall(function()
                         if target and target.Parent then
@@ -60,31 +56,15 @@ task.spawn(function()
                 end
             else
                 if not esperandoTickets then
-                    print("--- Going to Safe Zone (Static Mode)...")
+                    print("--- No tickets, returning to Fixed Safe Zone...")
                     esperandoTickets = true
                     recolectando = false
                 end
 
-                local dest = safeZonesFolder and (safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChild("Part") or safeZonesFolder:FindFirstChildWhichIsA("BasePart"))
-                
-                if not dest and invisPartsFolder then
-                    if not avisoBackupEnviado then
-                        print("No Safe Zone Found, using invis part.")
-                        avisoBackupEnviado = true
-                    end
-                    dest = invisPartsFolder:FindFirstChild("Part")
-                end
-                
-                if dest then
-                    hrp.Position = dest.Position + Vector3.new(0, 5, 0)
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-
-                    if safeZonesFolder and safeZonesFolder:FindFirstChildWhichIsA("BasePart") then
-                        avisoBackupEnviado = false
-                    end
-                end
+                hrp.Position = FixedSafePos
+                hrp.Velocity = Vector3.new(0, 0, 0)
             end
         end
-        task.wait(SafeZoneCD)
+        task.wait(recolectando and ScanCooldown or SafeZoneCD)
     end
 end)
