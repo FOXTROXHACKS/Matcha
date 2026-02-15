@@ -1,4 +1,7 @@
---config
+--[[V1.1
++ fixed mapchange crashing the script
++ upgraded safe method
+]]
 --[[
 local Collect = 0.3 
 local ScanCooldown = 0.5
@@ -19,8 +22,11 @@ task.spawn(function()
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
 
         local gameFolder = workspace:FindFirstChild("Game")
-        local ticketsFolder = gameFolder and gameFolder:FindFirstChild("Effects") and gameFolder.Effects:FindFirstChild("Tickets")
-        local safeZonesFolder = gameFolder and gameFolder:FindFirstChild("Map") and gameFolder.Map:FindFirstChild("SafeZones")
+        local effects = gameFolder and gameFolder:FindFirstChild("Effects")
+        local ticketsFolder = effects and effects:FindFirstChild("Tickets")
+        
+        local map = gameFolder and gameFolder:FindFirstChild("Map")
+        local safeZonesFolder = map and map:FindFirstChild("SafeZones")
 
         if hrp and ticketsFolder and safeZonesFolder then
             local allTickets = ticketsFolder:GetChildren()
@@ -50,17 +56,16 @@ task.spawn(function()
                 end
             else
                 if not esperandoTickets then
-                    print("--- Done collecting, going to safe zone...")
+                    print("--- Collected, going to Safe Zone...")
                     esperandoTickets = true
                     recolectando = false
                 end
-
-                local dest = safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChildWhichIsA("BasePart")
-    
+                    
+                local dest = safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChildWhichIsA("BasePart") or safeZonesFolder:FindFirstChildWhichIsA("Part")
+                
                 if dest then
                     pcall(function()
-                        local freshPos = dest.Position
-                        hrp.Position = freshPos + Vector3.new(0, 5, 0)
+                        hrp.Position = dest.Position + Vector3.new(0, 5, 0)
                     end)
                 end
                 
@@ -68,10 +73,12 @@ task.spawn(function()
             end
         else
             if not esperandoTickets then
-                print("--- Waiting for folders......")
+                print("--- [SYSTEM]: Map not detected, waiting for folders...")
                 esperandoTickets = true
             end
+            task.wait(1)
         end
-                task.wait(ScanCooldown)
+        
+        task.wait(ScanCooldown)
     end
 end)
