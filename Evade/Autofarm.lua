@@ -67,6 +67,7 @@ task.spawn(function()
                 local dest = safeZonesFolder and (safeZonesFolder:FindFirstChild("SafeZone") or safeZonesFolder:FindFirstChild("Part") or safeZonesFolder:FindFirstChildWhichIsA("BasePart"))
                 
                 if not dest and invisPartsFolder then
+                    print("No Safe Zone Found, using invis part.")
                     dest = invisPartsFolder:FindFirstChild("Part")
                 end
                 
