@@ -1,15 +1,13 @@
--- CONFIGURACIÓN GENERAL
+--local KeyTP = Enum.KeyCode.Z
 local Cooldown = 0.3 
 local ScanDelay = 0.5
-local KeyTP = Enum.KeyCode.Z
 local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
-
 local player = game:GetService("Players").LocalPlayer
 local spawnablesFolder = workspace.Spawnables.SpawnablesClient
 local UserInputService = game:GetService("UserInputService")
 
--- FLAGS DE ESTADO
-local esperandoHearts = false
+-- flags
+local esperandospawnables = false
 local recolectando = false
 
 print("------------------------------------------")
@@ -17,7 +15,7 @@ print("--- Duels AF & Pad TP: Active")
 print("--- Press 'Z' to teleport to PadZone5")
 print("------------------------------------------")
 
---- 1. LÓGICA DEL TELEPORT (KEYBIND Z) ---
+--- keybind tp
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == KeyTP then
         local character = player.Character
@@ -50,11 +48,10 @@ task.spawn(function()
         local ProcessedThisRound = 0
 
         if #spawnables > 0 then
-            -- Aviso de inicio de recolección
             if not recolectando then
-                print("--- Hearts spawned, collecting...")
+                print("--- Spawnables found, collecting...")
                 recolectando = true
-                esperandoHearts = false
+                esperandospawnables = false
             end
 
             for _, spawnbls in ipairs(spawnables) do
@@ -72,12 +69,12 @@ task.spawn(function()
             end
             
         else
-            if not esperandoHearts then
+            if not esperandospawnables then
                 pcall(function()
-                    notify("Autofarm", "Finished, waiting for hearts...", 2)
+                    notify("Autofarm", "Finished, waiting for spawnables...", 2)
                 end)
                 print("DONEEEE.")
-                esperandoHearts = true
+                esperandospawnables = true
                 recolectando = false
             end
             task.wait(ScanDelay)
