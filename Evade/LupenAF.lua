@@ -1,6 +1,8 @@
-local FixedSafePos = Vector3.new(-7.570, 380.103, 86.898)
 local TP_Cooldown = 0.1
+
 local SafeZoneCD = 0.1 
+
+local FixedSafePos = Vector3.new(-7.570, 380.103, 86.898)
 
 local player = game.Players.LocalPlayer
 local siguiendoALupen = false
@@ -36,7 +38,7 @@ task.spawn(function()
                     siguiendoALupen = false
                 end
                 hrp.Position = FixedSafePos
-                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.Velocity = Vector3.new(0, 0.2, 0)
             end
         end
         task.wait(siguiendoALupen and TP_Cooldown or SafeZoneCD)
