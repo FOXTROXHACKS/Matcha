@@ -9,7 +9,7 @@ local siguiendoALupen = false
 local enZonaSegura = false
 
 print("------------------------------------------")
-print("--- LUPEN TRACKER ---")
+print("--- LEPRECHAUN TRACKER ---")
 print("------------------------------------------")
 
 task.spawn(function()
@@ -24,7 +24,7 @@ task.spawn(function()
             local lupen = playersFolder and playersFolder:FindFirstChild("Lupen")
             local lupenHRP = lupen and lupen:FindFirstChild("HumanoidRootPart")
             if lupenHRP then                if not siguiendoALupen then
-                    print("--- Lupen found! teleporting..")
+                    print("--- LEPRECHAUN found! teleporting..")
                     siguiendoALupen = true
                     enZonaSegura = false
                 end
@@ -33,7 +33,7 @@ task.spawn(function()
                 end)
             else
                 if not enZonaSegura then
-                    print("--- Lupen not found, returning to Fixed Safe Zone...")
+                    print("--- LEPRECHAUN not found, returning to Fixed Safe Zone...")
                     enZonaSegura = true
                     siguiendoALupen = false
                 end
