@@ -1,13 +1,8 @@
 --[[
-[+] V 1.5.1
+[+] V 1.5
 [+] Fixed getting killed by nextbots (Hopefully)
 [+] Changes SafeZone Positions every 3 secs.
 [+] Added a ticket counter (IT ONLY COUNTS HOW MANY TICKETS WERE FOUND, NOT THE TOTAL AMOUNT YOU GAIN)
-]]
-
---[[V1.5
-+ Fixed getting killed by nextbots (Hopefully)
-+ Changes SafeZone Positions every 3 secs.
 ]]
 
 local Collect = 0.3 
