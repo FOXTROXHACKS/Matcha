@@ -5,6 +5,12 @@
 [+] Added a ticket counter (IT ONLY COUNTS HOW MANY TICKETS WERE FOUND, NOT THE TOTAL AMOUNT YOU GAIN)
 ]]
 --_G.SafeZone = true -- Toggle Global
+spawn(function()
+    while true do
+        notify("IMPORTANT", "There is a GUI for this script. check it out in matcha scripts",10)
+        task.wait(30)
+    end
+end)
 
 local Collect = 0.3 
 local ScanCooldown = 0.5
