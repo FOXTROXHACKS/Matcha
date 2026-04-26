@@ -1,7 +1,8 @@
 --[[
-[+] V 2.2 - HYBRID FARMER (Fix Nil Error)
-[+] NPC_AutoFarm Toggle integrado
-[+] Corrección de error de longitud en currentTickets
+[+] Full AutoFarm v1
+[+] NPC_AutoFarm Toggle
+[+] SafeZone Toggle
+[+] Tp Cooldown Toggle
 ]]
 --[[
 -- Global Config
