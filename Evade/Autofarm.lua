@@ -4,6 +4,7 @@
 [+] Changes SafeZone Positions every 3 secs.
 [+] Added a ticket counter (IT ONLY COUNTS HOW MANY TICKETS WERE FOUND, NOT THE TOTAL AMOUNT YOU GAIN)
 ]]
+--_G.SafeZone = true -- Toggle Global
 
 local Collect = 0.3 
 local ScanCooldown = 0.5
@@ -57,11 +58,11 @@ task.spawn(function()
                     local startTime = tick()
                     while tick() - startTime < Collect do
                         if target and target.Parent then
-							hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Velocity = Vector3.new(0, 0, 0)
                             hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
-							TotalTicketsFound = TotalTicketsFound + 1
-							print("--Found Ticket. [Tickets found so far.. "..TotalTicketsFound.."]")
-							task.wait(1)
+                            TotalTicketsFound = TotalTicketsFound + 1
+                            print("--Found Ticket. [Tickets found so far.. "..TotalTicketsFound.."]")
+                            task.wait(1)
                         else
                             break
                         end
@@ -69,26 +70,31 @@ task.spawn(function()
                     end
                 end
             else
-                if not esperandoTickets then
-                    esperandoTickets = true
-					print("Waiting for tickets..")
-                    recolectando = false
-                    currentSafePos = SafePositions[math.random(1, #SafePositions)]
-					if LOGS == true then
-						print("Position: "..tostring(currentSafePos))
-					end
-                    lastPosChange = tick()
-                end
+                if _G.SafeZone then
+                    if not esperandoTickets then
+                        esperandoTickets = true
+                        print("Waiting for tickets..")
+                        recolectando = false
+                        currentSafePos = SafePositions[math.random(1, #SafePositions)]
+                        if LOGS == true then
+                            print("Position: "..tostring(currentSafePos))
+                        end
+                        lastPosChange = tick()
+                    end
 
-                if tick() - lastPosChange >= 3 then
-                    currentSafePos = SafePositions[math.random(1, #SafePositions)]
-					if LOGS == true then
-						print("Position: "..tostring(currentSafePos))
-					end
-                    lastPosChange = tick()
+                    if tick() - lastPosChange >= 3 then
+                        currentSafePos = SafePositions[math.random(1, #SafePositions)]
+                        if LOGS == true then
+                            print("Position: "..tostring(currentSafePos))
+                        end
+                        lastPosChange = tick()
+                    end
+                    hrp.Position = currentSafePos
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                else
+                    esperandoTickets = false
+                    recolectando = false
                 end
-                hrp.Position = currentSafePos
-                hrp.Velocity = Vector3.new(0, 0, 0)
             end
         end
         task.wait(recolectando and ScanCooldown or SafeZoneCD)
