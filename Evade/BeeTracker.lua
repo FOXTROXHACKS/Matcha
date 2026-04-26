@@ -34,7 +34,7 @@ task.spawn(function()
                     hrp.Position = beeHRP.Position + Vector3.new(0, 2, 0)
                 end)
             else
-                if SafeZone == true then
+                if _G.SafeZone == true then
                     if not enZonaSegura then
                         print("--- BEE not found, returning to Fixed Safe Zone...")
                         enZonaSegura = true
