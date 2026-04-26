@@ -1,6 +1,11 @@
 --_G.NPC_SafeZone = true
 _G.TP_Cooldown = 0.05
-
+spawn(function()
+    while true do
+        notify("IMPORTANT", "There is a GUI for this script. check it out in matcha scripts",10)
+        task.wait(30)
+    end
+end)
 local SafeZoneCD = 0.1 
 local FixedSafePos = Vector3.new(-7.570, 380.103, 86.898)
 
