@@ -26,7 +26,7 @@ local recolectando = false
 local lastPosChange = 0
 local currentSafePos = SafePositions[1]
 
-print("--- Full Autofarm LOADED ---")
+print("--- Full AutoFarm LOADED ---")
 
 task.spawn(function()
     while true do
@@ -75,6 +75,7 @@ task.spawn(function()
                     end
                     TotalTicketsFound = TotalTicketsFound + 1
                     print("--Ticket Collected. [Total: "..TotalTicketsFound.."]")
+                    task.wait(1)
                 end
             else
                 if _G.SafeZone then
@@ -82,10 +83,17 @@ task.spawn(function()
                         esperando = true
                         recolectando = false
                         currentSafePos = SafePositions[math.random(1, #SafePositions)]
+                        print("--- No tickets, returning to Fixed Safe Zone...")
+                        if LOGS == true then
+                            print("Position: "..tostring(currentSafePos))
+                        end
                         lastPosChange = tick()
                     end
                     if tick() - lastPosChange >= 3 then
                         currentSafePos = SafePositions[math.random(1, #SafePositions)]
+                        if LOGS == true then
+                            print("Position: "..tostring(currentSafePos))
+                        end
                         lastPosChange = tick()
                     end
                     hrp.Position = currentSafePos
