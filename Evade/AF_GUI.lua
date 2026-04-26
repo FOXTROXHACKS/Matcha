@@ -91,6 +91,7 @@ task.spawn(function()
                             hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
                             TotalTicketsFound = TotalTicketsFound + 1
                             print("--Found Ticket. [Tickets found so far.. "..TotalTicketsFound.."]")
+                            notify("Found Ticket.","Tickets found so far.. "..TotalTicketsFound,2)
                             task.wait(1)
                         else
                             break
