@@ -1,3 +1,4 @@
+--_G.SafeZone = true
 _G.TP_Cooldown = 0.1
 
 local SafeZoneCD = 0.1 
