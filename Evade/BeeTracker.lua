@@ -1,5 +1,5 @@
 --_G.SafeZone = true
-_G.TP_Cooldown = 0.1
+_G.TP_Cooldown = 0.05
 
 local SafeZoneCD = 0.1 
 local FixedSafePos = Vector3.new(-7.570, 380.103, 86.898)
