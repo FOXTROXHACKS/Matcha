@@ -1,7 +1,8 @@
 --[[
-[+] EVADE Autofarm v1
-[+] Made GUI using matcha UI
-[+] Made toggles for autofarm, npc, sfaezone and position logs
+[+] EVADE AutoFarm GUI v1
+[+] NPC Autofarm (Collects the bee)
+[+] Tickets Autofarm (Collects the Honey)
+[+] SafeZones to not get killed
 ]]
 _G.Full_AutoFarm = true
 _G.SafeZone = true
@@ -10,7 +11,7 @@ _G.TP_Cooldown = 0.05
 _G.LOGS = false
 
 UI.AddTab("AutoFarm", function(tab)
-    local sec = tab:Section("Configuration", "Left")
+    local sec = tab:Section("Autofarm V1", "Left")
     sec:Toggle("full_autofarm", "Tickets AutoFarm", _G.Full_AutoFarm, function(state)
         _G.Full_AutoFarm = state
     end)
