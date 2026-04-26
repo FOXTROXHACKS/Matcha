@@ -3,12 +3,12 @@
 [+] NPC_AutoFarm Toggle integrado
 [+] Corrección de error de longitud en currentTickets
 ]]
-
+--[[
 -- Global Config
 _G.SafeZone = true         
 _G.NPC_AutoFarm = true      
 _G.TP_Cooldown = 0.05       
-
+]]
 local Collect = 0.3 
 local ScanCooldown = 0.5
 local SafeZoneCD = 0.1 
