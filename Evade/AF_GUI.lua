@@ -11,7 +11,7 @@ _G.TP_Cooldown = 0.05
 _G.LOGS = false
 
 UI.AddTab("AutoFarm", function(tab)
-    local sec = tab:Section("Autofarm V1", "Left")
+    local sec = tab:Section("Configuration", "Left")
     sec:Toggle("full_autofarm", "Tickets AutoFarm", _G.Full_AutoFarm, function(state)
         _G.Full_AutoFarm = state
     end)
