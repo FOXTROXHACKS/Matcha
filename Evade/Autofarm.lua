@@ -2,11 +2,11 @@
 + Fixed getting killed by nextbots (Hopefully)
 + Changes SafeZone Positions every 3 secs.
 ]]
---[[
+
 local Collect = 0.3 
 local ScanCooldown = 0.5
 local SafeZoneCD = 0.1 
-]]
+
 local SafePositions = {
     Vector3.new(-230, 280, -200),
     Vector3.new(0, 280, 0),
