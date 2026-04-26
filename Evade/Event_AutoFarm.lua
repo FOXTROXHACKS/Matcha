@@ -7,7 +7,8 @@
 -- Global Config
 _G.SafeZone = true         
 _G.NPC_AutoFarm = true      
-_G.TP_Cooldown = 0.05       
+_G.TP_Cooldown = 0.05
+_G.LOGS = false
 ]]
 local Collect = 0.3 
 local ScanCooldown = 0.5
