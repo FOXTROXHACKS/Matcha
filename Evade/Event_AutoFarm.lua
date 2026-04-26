@@ -69,14 +69,14 @@ task.spawn(function()
                         if target and target.Parent and hrp then
                             hrp.Velocity = Vector3.new(0, 0, 0)
                             hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
+                            TotalTicketsFound = TotalTicketsFound + 1
+                            print("--Found Ticket. [Tickets found so far.. "..TotalTicketsFound.."]")
+                            task.wait(1)
                         else
                             break
                         end
                         task.wait()
                     end
-                    TotalTicketsFound = TotalTicketsFound + 1
-                    print("--Ticket Collected. [Total: "..TotalTicketsFound.."]")
-                    task.wait(1)
                 end
             else
                 if _G.SafeZone then
