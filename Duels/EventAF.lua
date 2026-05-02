@@ -1,6 +1,6 @@
-_G.Duels_Autofarm = false
+_G.Duels_Autofarm = true
 _G.Auto_TP_Pad = false
-_G.Cooldown_Duels = 0.3
+_G.Cooldown_Duels = 0.5
 
 local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
 local player = game:GetService("Players").LocalPlayer
@@ -18,11 +18,6 @@ UI.AddTab("Duels", function(tab)
     sec:SliderInt("duels_cooldown", "Collection Delay (ms)", 1, 100, (_G.Cooldown_Duels * 100), function(val)
         _G.Cooldown_Duels = val / 100
     end)
-
-    local info = tab:Section("Logic Info", "Right")
-    info:Text("1. Recolecta todo el mapa.")
-    info:Text("2. Si no hay nada, vuelve al Pad.")
-    info:Text("3. Espera ahí hasta nueva ronda.")
 end)
 
 local yaEnElPad = false
@@ -50,6 +45,7 @@ task.spawn(function()
                 end
             else
                 if UI.GetValue("pad_toggle") and not yaEnElPad and PadPath then
+                    task.wait(5)
                     pcall(function()
                         hrp.CFrame = PadPath.CFrame + Vector3.new(0, 3, 0)
                     end)
