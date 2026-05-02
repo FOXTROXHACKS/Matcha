@@ -9,7 +9,8 @@ local spawnablesFolder = workspace.Spawnables.SpawnablesClient
 local lastPadTP = 0
 
 UI.AddTab("Duels", function(tab)
-    local sec = tab:Section("Main Settings", "Left")
+    local sec = tab:Section("Duels Autofarm - V1.1", "Left")
+    sec:Text("Settings")
     sec:Toggle("duels_toggle", "Enable AutoFarm", Duels_Autofarm, function(state)
         Duels_Autofarm = state
         notify("Autofarm", (state and "Enabled" or "Disabled"), 2)
