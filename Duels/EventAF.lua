@@ -7,7 +7,8 @@ local esperandospawnables = false
 local recolectando = false
 
 UI.AddTab("Duels", function(tab)
-    local sec = tab:Section("Duels Settings", "Left")
+    local sec = tab:Section("Duels Event Autofarm - V1.1", "Middle")
+	sec:Text("Settings")
     sec:Toggle("duels_toggle", "Enable AutoFarm", _G.Duels_Autofarm, function(state)
         _G.Duels_Autofarm = state
         local statusText = state and "On" or "Off"
