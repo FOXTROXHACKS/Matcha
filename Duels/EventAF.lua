@@ -1,6 +1,6 @@
-_G.Duels_Autofarm = false
-_G.Auto_TP_Pad = false
-_G.Cooldown_Duels = 0.03
+local Duels_Autofarm = true
+local Auto_TP_Pad = false
+local Cooldown_Duels = 0.05
 
 local PadWaitTime = 5
 local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
@@ -10,16 +10,16 @@ local lastPadTP = 0
 
 UI.AddTab("Duels", function(tab)
     local sec = tab:Section("Main Settings", "Left")
-    sec:Toggle("duels_toggle", "Enable AutoFarm", _G.Duels_Autofarm, function(state)
-        _G.Duels_Autofarm = state
+    sec:Toggle("duels_toggle", "Enable AutoFarm", Duels_Autofarm, function(state)
+        Duels_Autofarm = state
         notify("Autofarm", (state and "Enabled" or "Disabled"), 2)
     end)
-    sec:Toggle("pad_toggle", "Auto TP Pad (5s)", _G.Auto_TP_Pad, function(state)
-        _G.Auto_TP_Pad = state
+    sec:Toggle("pad_toggle", "Auto TP Pad (5s)", Auto_TP_Pad, function(state)
+        Auto_TP_Pad = state
         notify("Pad TP", (state and "Active" or "Inactive"), 2)
     end)
-    sec:SliderInt("duels_cooldown", "Collection Delay (ms)", 1, 100, (_G.Cooldown_Duels * 100), function(val)
-        _G.Cooldown_Duels = val / 100
+    sec:SliderInt("duels_cooldown", "Collection Delay (ms)", 1, 100, (Cooldown_Duels * 100), function(val)
+        Cooldown_Duels = val / 100
     end)
 end)
 task.spawn(function()
@@ -40,7 +40,7 @@ task.spawn(function()
                         pcall(function()
                             hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0)
                         end)
-                        task.wait(_G.Cooldown_Duels)
+                        task.wait(Cooldown_Duels)
                     end
                 end
                 lastPadTP = 0
