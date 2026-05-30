@@ -1,8 +1,9 @@
 --[[
-[+] ADOPT ME AutoFarm GUI v2.2
-[+] FIXED TRUCK LOGIC: Separate, dedicated idle-anchor mechanics.
-[+] TRUCK CYCLE: Safe idle on 'polySurface95' (+2.5 Y) -> Sweep Tokens when spawned -> Instant Return to Truck.
-[+] CLEAN BUCKET ROUTINE: Fully restored to its isolated standalone delivery cycle.
+[+] ADOPT ME AutoFarm GUI v2.5
+[+] INTERFACE FIX: Kept unstable separators out to ensure full Matcha rendering.
+[+] TRUCK ROUTINE UPDATE: Adjusted safe idle anchor height to +9 Y on 'polySurface95'.
+[+] TRUCK CYCLE: Idle at +9 Y -> Sweep Tokens when spawned -> Instant Return to +9 Y on Truck.
+[+] STANDALONE BUCKET ROUTINE: Maintained independent delivery cycle (1s, 1s, 1s, 2s delays).
 [+] OPTIMIZED: Pure local table configuration storage (No _G).
 ]]
 
@@ -25,8 +26,6 @@ UI.AddTab("AutoFarm", function(tab)
     sec:Toggle("truck_toggle", "Truck Idle & Token Farm", config.Truck_AutoFarm, function(state)
         config.Truck_AutoFarm = state
     end)
-    
-    sec:Separator()
 
     -- GRUPO TOKENS / COINS
     sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
@@ -35,8 +34,6 @@ UI.AddTab("AutoFarm", function(tab)
     sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 2, function(val)
         config.Token_Cooldown = val / 100
     end)
-    
-    sec:Separator()
 
     -- GRUPO BEAMS
     sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
@@ -45,8 +42,6 @@ UI.AddTab("AutoFarm", function(tab)
     sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Beam_Cooldown = val / 100
     end)
-    
-    sec:Separator()
     
     -- RESTO DE CONFIGURACIÓN
     sec:Toggle("bucket_toggle", "Bucket AutoFarm", config.Bucket_AutoFarm, function(state)
@@ -121,7 +116,7 @@ local function GetTruckMeshInstance()
     return nil
 end
 
-print("--- ADOPT ME AUTO-FARM V2.2 (LOGIC SEPARATION FIXED) ---")
+print("--- ADOPT ME AUTO-FARM V2.5 (TRUCK HEIGHT UPDATED TO 9) ---")
 
 task.spawn(function()
     while true do
@@ -160,10 +155,10 @@ task.spawn(function()
                         end
                     end
                 else
-                    -- Si NO hay monedas, nos anclamos arriba del polySurface95 de manera segura
+                    -- Si NO hay monedas, nos anclamos arriba del polySurface95 con la altura de 9 unidades
                     if truckPart.Parent and hrp then
                         hrp.Velocity = Vector3.new(0, 0, 0)
-                        hrp.Position = truckPart.Position + Vector3.new(0, 2.5, 0)
+                        hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
                     end
                 end
                 
