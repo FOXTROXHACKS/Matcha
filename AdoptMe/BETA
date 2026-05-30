@@ -1,14 +1,13 @@
 --[[
-[+] ADOPT ME AutoFarm GUI v2.5
-[+] INTERFACE FIX: Kept unstable separators out to ensure full Matcha rendering.
-[+] TRUCK ROUTINE UPDATE: Adjusted safe idle anchor height to +9 Y on 'polySurface95'.
-[+] TRUCK CYCLE: Idle at +9 Y -> Sweep Tokens when spawned -> Instant Return to +9 Y on Truck.
-[+] STANDALONE BUCKET ROUTINE: Maintained independent delivery cycle (1s, 1s, 1s, 2s delays).
-[+] OPTIMIZED: Pure local table configuration storage (No _G).
+[+] ADOPT ME AutoFarm GUI v3.7
+[+] FLOATING POINT FIX: Uses math.abs tolerance instead of strict equality to prevent floating-point ghost movement.
+[+] PARKING TOLERANCE: If polySurface95 is within 0.1 units of (-325.63, 32.07, -1439.19), it is strictly ignored.
+[+] EVENT TRIGGERS: Activates per-coin sweep and spacebar (0x20) loop ONLY when the truck fully leaves the parking spot.
+[+] IDLE STATE: Safe floating at +9 Y over the truck when parked.
 ]]
 
 local config = {
-    Beam_AutoFarm = true,
+    Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
     
     Token_AutoFarm = true,
@@ -16,8 +15,14 @@ local config = {
     
     Truck_AutoFarm = true,
     Bucket_AutoFarm = true,
-    LOGS = false
+    LOGS = false,
+    CoinLogs = false 
 }
+
+-- Coordenadas estáticas de reposo absolutas
+local PARKED_X = -325.63
+local PARKED_Y = 32.07
+local PARKED_Z = -1439.19
 
 UI.AddTab("AutoFarm", function(tab)
     local sec = tab:Section("Configuration", "Left")
@@ -47,23 +52,15 @@ UI.AddTab("AutoFarm", function(tab)
     sec:Toggle("bucket_toggle", "Bucket AutoFarm", config.Bucket_AutoFarm, function(state)
         config.Bucket_AutoFarm = state
     end)
+    sec:Toggle("coin_logs_toggle", "Coin Logs & Errors", config.CoinLogs, function(state) 
+        config.CoinLogs = state
+    end)
     sec:Toggle("logs_toggle", "Position Logs", config.LOGS, function(state)
         config.LOGS = state
     end)
 
     -- SECCIÓN DE ACCIONES Y TELETRANSPORTES
     local secTP = tab:Section("Instant Actions & TPs", "Right")
-    
-    secTP:Button("Simulate Press E", function()
-        if keypress and keyrelease then
-            keypress(0x45)
-            task.wait(0.5)
-            keyrelease(0x45)
-            print("--- [KeyPress] Key 'E' (0x45) simulated successfully!")
-        else
-            print("--- [ERROR] 'keypress' environment function missing.")
-        end
-    end)
     
     secTP:Button("TP to Bucket", function()
         local character = game.Players.LocalPlayer.Character
@@ -74,20 +71,41 @@ UI.AddTab("AutoFarm", function(tab)
             if rootPart and rootPart:IsA("BasePart") then
                 hrp.Velocity = Vector3.new(0, 0, 0)
                 hrp.Position = rootPart.Position + Vector3.new(0, 1.5, 0)
-                print("--- [AdoptMe] Teleported to Bucket successfully!")
+                print("--- [Manual TP] Teleported to Bucket successfully!")
             else
-                print("--- [AdoptMe] Bucket not found in workspace.")
+                print("--- [Manual TP] Bucket not found in workspace.")
             end
         end
     end)
 
-    secTP:Button("TP to Event Stand", function()
+    secTP:Button("TP to Truck", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local interiors = workspace:FindFirstChild("Interiors")
+            local mainMap = interiors and interiors:FindFirstChild("MainMap!Default")
+            local truck = mainMap and mainMap:FindFirstChild("Truck")
+            local geometry = truck and truck:FindFirstChild("Geometry")
+            local poly = geometry and geometry:FindFirstChild("polySurface95")
+            
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            if poly and poly:IsA("BasePart") then
+                hrp.Position = poly.Position + Vector3.new(0, 9, 0)
+                print("--- [Manual TP] Teleported on top of Truck Mesh (+9)!")
+            else
+                hrp.Position = Vector3.new(-322.07, 31.03 + 9, -1447.33)
+                print("--- [Manual TP] Truck Mesh not found. Using safe fixed backup coordinates (+9)!")
+            end
+        end
+    end)
+
+    secTP:Button("TP to Water Tank", function()
         local character = game.Players.LocalPlayer.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.Position = Vector3.new(-339.17, 31.02 + 1.5, -1448.33)
-            print("--- [AdoptMe] Teleported to Event Stand Fixed Position!")
+            hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
+            print("--- [Manual TP] Teleported to Water Tank Position!")
         end
     end)
 end)
@@ -116,7 +134,7 @@ local function GetTruckMeshInstance()
     return nil
 end
 
-print("--- ADOPT ME AUTO-FARM V2.5 (TRUCK HEIGHT UPDATED TO 9) ---")
+print("--- ADOPT ME AUTO-FARM V3.7 (FLOAT TOLERANCE PATCH) ---")
 
 task.spawn(function()
     while true do
@@ -131,43 +149,100 @@ task.spawn(function()
         if hrp then
             local truckPart = GetTruckMeshInstance()
 
-            -- 1. CONTROL EXCLUSIVO DE CAMIÓN ACTIVO (MÉTODO IDLE / RECOLECCIÓN RÁPIDA)
+            -- 1. CONTROL INTELIGENTE CON TOLERANCIA MATEMÁTICA
             if config.Truck_AutoFarm and truckPart then
-                local tokens = {}
-                local children = workspace:GetChildren()
                 
-                -- Escaneo inmediato de monedas
-                for i = 1, #children do
-                    local child = children[i]
-                    if child.Name == "TokenPickup" then
-                        local col = child:FindFirstChild("Collider") or child
-                        if col:IsA("BasePart") then table.insert(tokens, col) end
+                local isTruckMoving = false
+                if truckPart.Parent then
+                    local currentPos = truckPart.Position
+                    
+                    -- Margen delta para mitigar imprecisiones de coma flotante del motor físico
+                    local deltaX = math.abs(currentPos.X - PARKED_X)
+                    local deltaY = math.abs(currentPos.Y - PARKED_Y)
+                    local deltaZ = math.abs(currentPos.Z - PARKED_Z)
+                    
+                    -- Si el camión se desplaza más de 0.1 unidades en cualquier eje, se considera en movimiento
+                    if deltaX > 0.1 or deltaY > 0.1 or deltaZ > 0.1 then
+                        isTruckMoving = true
                     end
                 end
-                
-                if #tokens > 0 then
-                    -- Si hay monedas, limpiamos el mapa por completo
-                    for _, token in ipairs(tokens) do
-                        if token and token.Parent and hrp then
+
+                if isTruckMoving then
+                    -- [FASE EN MOVIMIENTO] Escaneo de monedas activas
+                    local tokens = {}
+                    local children = workspace:GetChildren()
+                    
+                    for i = 1, #children do
+                        local child = children[i]
+                        if child.Name == "TokenPickup" then
+                            local col = child:FindFirstChild("Collider") or child
+                            if col:IsA("BasePart") then table.insert(tokens, col) end
+                        end
+                    end
+                    
+                    if #tokens > 0 then
+                        for _, token in ipairs(tokens) do
+                            if config.CoinLogs then
+                                print("--- [CoinLog] Token detected: " .. tostring(token:GetFullName()))
+                            end
+
+                            -- Validación de estabilidad
+                            if not token or not token.Parent or not token:IsA("BasePart") then
+                                task.wait(0.01)
+                                if not token or not token.Parent or not token:IsA("BasePart") then
+                                    if config.CoinLogs then error("CoinLog: No Tp part found") else continue end
+                                end
+                            end
+
+                            if hrp then
+                                local successPos, targetPos = pcall(function() return token.Position end)
+                                if not successPos or not targetPos then
+                                    task.wait(0.01)
+                                    successPos, targetPos = pcall(function() return token.Position end)
+                                    if not successPos or not targetPos then
+                                        if config.CoinLogs then error("CoinLog: No Tp part found") else continue end
+                                    end
+                                end
+
+                                -- TP directo al Coin
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                task.wait(0.01)
+
+                                -- Salto dedicado con barra espaciadora
+                                if keypress and keyrelease then
+                                    keypress(0x20)
+                                    task.wait(0.04)
+                                    keyrelease(0x20)
+                                end
+
+                                task.wait(config.Token_Cooldown)
+                            end
+                        end
+                    else
+                        -- Retorno a la parte superior si se vació el tramo actual en movimiento
+                        if truckPart.Parent and hrp then
                             hrp.Velocity = Vector3.new(0, 0, 0)
-                            hrp.Position = token.Position + Vector3.new(0, 1.5, 0)
-                            task.wait(config.Token_Cooldown)
+                            hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
                         end
                     end
                 else
-                    -- Si NO hay monedas, nos anclamos arriba del polySurface95 con la altura de 9 unidades
+                    -- [FASE ESTACIONADO / REPOSO] Ignorar por completo y mantener reposo pasivo a +9 sin bucles de TP
                     if truckPart.Parent and hrp then
-                        hrp.Velocity = Vector3.new(0, 0, 0)
-                        hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
+                        -- Solo ajusta la posición de reposo una vez si se cae, evitando spam por tick
+                        local distToIdle = (hrp.Position - (truckPart.Position + Vector3.new(0, 9, 0))).Magnitude
+                        if distToIdle > 2 then
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
+                        end
                     end
                 end
                 
-                -- Ciclo prioritario rápido del camión terminado
-                task.wait(0.05)
+                task.wait(0.1) -- Cooldown de escaneo de camión ligeramente suavizado para estabilidad
                 continue
             end
 
-            -- 2. RUTINA DE GRANJA GENERAL (CUANDO TRUCK NO ESTÁ O ESTÁ APAGADO)
+            -- 2. RUTINA DE GRANJA GENERAL (CUANDO TRUCK ESTÁ APAGADO O INACTIVO)
             local currentTargets = {}
             local allChildren = workspace:GetChildren()
             
@@ -207,35 +282,29 @@ task.spawn(function()
                     local itemType = item.Type
 
                     if target and target.Parent and hrp and target:IsA("BasePart") then
-                        
-                        -- RUTINA INDEPENDIENTE DEL BALDE (Tiempos personalizados exactos)
+
                         if itemType == "Bucket" and config.Bucket_AutoFarm then
-                            
-                            -- Recoger el Balde
-                            hrp.Velocity = Vector3.new(0, 0, 0)
-                            hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
-                            task.wait(1.0)
+                            if target.Position then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
+                                task.wait(1.0)
 
-                            -- TP al dispensador de agua
-                            hrp.Velocity = Vector3.new(0, 0, 0)
-                            hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
-                            task.wait(1.0)
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
+                                task.wait(1.0)
 
-                            -- Presionar E
-                            if keypress and keyrelease then
-                                keypress(0x45)
-                                task.wait(0.5)
-                                keyrelease(0x45)
+                                if keypress and keyrelease then
+                                    keypress(0x45)
+                                    task.wait(0.5)
+                                    keyrelease(0x45)
+                                end
+                                task.wait(1.0)
+
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = Vector3.new(-322.07, 31.03 + 1.5, -1447.33)
+                                
+                                task.wait(2.0)
                             end
-                            task.wait(1.0)
-
-                            -- TP de entrega final independiente original
-                            hrp.Velocity = Vector3.new(0, 0, 0)
-                            hrp.Position = Vector3.new(-322.07, 31.03 + 1.5, -1447.33)
-                            
-                            task.wait(2.0) -- Enfriamiento de reenganche
-                        
-                        -- Monedas (Modo libre)
                         elseif itemType == "Token" and config.Token_AutoFarm then
                             local targetPos = target.Position
                             if targetPos then
@@ -244,7 +313,6 @@ task.spawn(function()
                                 task.wait(config.Token_Cooldown)
                             end
 
-                        -- Beams (Modo libre)
                         elseif itemType == "Beam" and config.Beam_AutoFarm then
                             local targetPos = target.Position
                             if targetPos then
@@ -258,7 +326,6 @@ task.spawn(function()
                 end
             end
         end
-        
         task.wait(ScanCooldown)
     end
 end)
