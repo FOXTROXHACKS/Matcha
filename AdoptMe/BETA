@@ -1,0 +1,276 @@
+--[[
+[+] ADOPT ME AutoFarm GUI v2.1
+[+] REVISED BUCKET ROUTINE: Applied exact custom timing parameters (1s, 1s, 1s, 2s delays).
+[+] TRUCK ROUTINE INTEGRATED: The bucket sequence now correctly deposits inside 'polySurface95'.
+[+] HEIGHT ADJUSTMENT: Kept the +2.5 Y-axis safety margin on Truck destinations.
+[+] OPTIMIZED: Local table configuration storage (No _G).
+]]
+
+local config = {
+    Beam_AutoFarm = true,
+    Beam_Cooldown = 0.05,
+    
+    Token_AutoFarm = true,
+    Token_Cooldown = 0.02,
+    
+    Truck_AutoFarm = true,
+    Bucket_AutoFarm = true,
+    LOGS = false
+}
+
+UI.AddTab("AutoFarm", function(tab)
+    local sec = tab:Section("Configuration", "Left")
+    
+    -- GRUPO TRUCK
+    sec:Toggle("truck_toggle", "Truck AutoFarm (Spam Cycle)", config.Truck_AutoFarm, function(state)
+        config.Truck_AutoFarm = state
+    end)
+    
+    sec:Separator()
+
+    -- GRUPO TOKENS / COINS
+    sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
+        config.Token_AutoFarm = state
+    end)
+    sec:SliderInt("token_cooldown", "Token/Truck TP Cooldown (ms)", 1, 100, 2, function(val)
+        config.Token_Cooldown = val / 100
+    end)
+    
+    sec:Separator()
+
+    -- GRUPO BEAMS
+    sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
+        config.Beam_AutoFarm = state
+    end)
+    sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
+        config.Beam_Cooldown = val / 100
+    end)
+    
+    sec:Separator()
+    
+    -- RESTO DE CONFIGURACIÓN
+    sec:Toggle("bucket_toggle", "Bucket AutoFarm", config.Bucket_AutoFarm, function(state)
+        config.Bucket_AutoFarm = state
+    end)
+    sec:Toggle("logs_toggle", "Position Logs", config.LOGS, function(state)
+        config.LOGS = state
+    end)
+
+    -- SECCIÓN DE ACCIONES Y TELETRANSPORTES
+    local secTP = tab:Section("Instant Actions & TPs", "Right")
+    
+    secTP:Button("Simulate Press E", function()
+        if keypress and keyrelease then
+            keypress(0x45)
+            task.wait(0.5)
+            keyrelease(0x45)
+            print("--- [KeyPress] Key 'E' (0x45) simulated successfully!")
+        else
+            print("--- [ERROR] 'keypress' environment function missing.")
+        end
+    end)
+    
+    secTP:Button("TP to Bucket", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local bucket = workspace:FindFirstChild("Bucket")
+            local rootPart = bucket and bucket:FindFirstChild("Root")
+            if rootPart and rootPart:IsA("BasePart") then
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.Position = rootPart.Position + Vector3.new(0, 1.5, 0)
+                print("--- [AdoptMe] Teleported to Bucket successfully!")
+            else
+                print("--- [AdoptMe] Bucket not found in workspace.")
+            end
+        end
+    end)
+
+    secTP:Button("TP to Event Stand", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.Position = Vector3.new(-339.17, 31.02 + 1.5, -1448.33)
+            print("--- [AdoptMe] Teleported to Event Stand Fixed Position!")
+        end
+    end)
+end)
+
+local ScanCooldown = 0.3 
+local TotalItemsFound = 0
+local player = game.Players.LocalPlayer
+
+-- BÚSQUEDA DEL POLYSURFACE95 DEL CAMIÓN (EVITANDO CONFLICTOS CON EL CARÁCTER '!')
+local function GetTruckMeshInstance()
+    local interiors = workspace:FindFirstChild("Interiors")
+    if interiors then
+        local mainMap = interiors:FindFirstChild("MainMap!Default")
+        if mainMap then
+            local truck = mainMap:FindFirstChild("Truck")
+            if truck then
+                local geometry = truck:FindFirstChild("Geometry")
+                if geometry then
+                    local targetMesh = geometry:FindFirstChild("polySurface95")
+                    if targetMesh and targetMesh:IsA("BasePart") then
+                        return targetMesh
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+print("--- ADOPT ME AUTO-FARM V2.1 LOADED (NEW BUCKET TIMINGS) ---")
+
+task.spawn(function()
+    while true do
+        if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Bucket_AutoFarm and not config.Truck_AutoFarm then 
+            task.wait(0.5) 
+            continue 
+        end
+
+        local character = player.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+        if hrp then
+            -- OBTENER REFERENCIA DEL CAMIÓN DESDE EL INICIO
+            local truckPart = GetTruckMeshInstance()
+
+            -- 1. CONTROL PRIORITARIO DE EVENTO TRUCK (MÉTODO EN RÁFAGA CON MONEDAS)
+            if config.Truck_AutoFarm and truckPart and config.Token_AutoFarm then
+                local tokens = {}
+                local children = workspace:GetChildren()
+                
+                for i = 1, #children do
+                    local child = children[i]
+                    if child.Name == "TokenPickup" then
+                        local col = child:FindFirstChild("Collider") or child
+                        if col:IsA("BasePart") then table.insert(tokens, col) end
+                    end
+                end
+                
+                if #tokens > 0 then
+                    for _, token in ipairs(tokens) do
+                        if token and token.Parent and truckPart and truckPart.Parent and hrp then
+                            
+                            -- PASO A: Spam al polySurface95 del Truck (+2.5 Y)
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = truckPart.Position + Vector3.new(0, 2.5, 0)
+                            task.wait(config.Token_Cooldown)
+                            
+                            -- PASO B: Spam directo a la moneda
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = token.Position + Vector3.new(0, 1.5, 0)
+                            task.wait(config.Token_Cooldown)
+                        end
+                    end
+                    task.wait(0.05)
+                    continue
+                end
+            end
+
+            -- 2. RUTINA GENERAL (CUANDO EL CAMIÓN NO ESTÁ ABSORBIENDO MONEDAS)
+            local currentTargets = {}
+            local allChildren = workspace:GetChildren()
+            
+            for i = 1, #allChildren do
+                local child = allChildren[i]
+                
+                -- Light Beams
+                if config.Beam_AutoFarm and child.Name == "SmallLightBeam" then
+                    if child:IsA("BasePart") then
+                        table.insert(currentTargets, {Part = child, Type = "Beam"})
+                    elseif child:IsA("Model") then
+                        local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+                        if primary then table.insert(currentTargets, {Part = primary, Type = "Beam"}) end
+                    end
+                
+                -- Monedas Estándar
+                elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
+                    local colliderPart = child:FindFirstChild("Collider")
+                    if colliderPart and colliderPart:IsA("BasePart") then
+                        table.insert(currentTargets, {Part = colliderPart, Type = "Token"})
+                    elseif child:IsA("BasePart") then
+                        table.insert(currentTargets, {Part = child, Type = "Token"})
+                    end
+
+                -- Buckets
+                elseif config.Bucket_AutoFarm and child.Name == "Bucket" then
+                    local rootPart = child:FindFirstChild("Root")
+                    if rootPart and rootPart:IsA("BasePart") then
+                        table.insert(currentTargets, {Part = rootPart, Type = "Bucket"})
+                    end
+                end
+            end
+
+            if #currentTargets > 0 then
+                for _, item in ipairs(currentTargets) do
+                    local target = item.Part
+                    local itemType = item.Type
+
+                    if target and target.Parent and hrp and target:IsA("BasePart") then
+                        
+                        -- NUEVA LOGICA DE TIEMPOS CALIBRADA PARA EL BALDE
+                        if itemType == "Bucket" and config.Bucket_AutoFarm then
+                            
+                            -- 1. Recoge el Bucket
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
+                            task.wait(1.0) -- Espera 1 segundo
+
+                            -- 2. Se hace TP al tambo de agua
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
+                            task.wait(1.0) -- Espera 1 segundo
+
+                            -- 3. Presiona la tecla E
+                            if keypress and keyrelease then
+                                keypress(0x45)
+                                task.wait(0.5)
+                                keyrelease(0x45)
+                            end
+                            task.wait(1.0) -- Espera 1 segundo después de presionar
+
+                            -- 4. Se hace TP al camión (Usa polySurface95 si existe, si no usa la posición fija)
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            if truckPart and truckPart.Parent then
+                                hrp.Position = truckPart.Position + Vector3.new(0, 2.5, 0)
+                            else
+                                hrp.Position = Vector3.new(-322.07, 31.03 + 2.5, -1447.33)
+                            end
+                            
+                            if config.LOGS then
+                                print("[Bucket Timed Routine] Loop successfully completed.")
+                            end
+                            
+                            task.wait(2.0) -- Espera 2 segundos antes de permitir que empiece otra vez
+                        
+                        -- Monedas individuales
+                        elseif itemType == "Token" and config.Token_AutoFarm then
+                            local targetPos = target.Position
+                            if targetPos then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                task.wait(config.Token_Cooldown)
+                            end
+
+                        -- Haces de luz individuales
+                        elseif itemType == "Beam" and config.Beam_AutoFarm then
+                            local targetPos = target.Position
+                            if targetPos then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                task.wait(config.Beam_Cooldown)
+                            end
+                        end
+
+                    end
+                end
+            end
+        end
+        
+        task.wait(ScanCooldown)
+    end
+end)
