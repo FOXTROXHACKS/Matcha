@@ -1,11 +1,11 @@
 --[[
-[+] ADOPT ME AutoFarm GUI v3.7
-[+] FLOATING POINT FIX: Uses math.abs tolerance instead of strict equality to prevent floating-point ghost movement.
-[+] PARKING TOLERANCE: If polySurface95 is within 0.1 units of (-325.63, 32.07, -1439.19), it is strictly ignored.
-[+] EVENT TRIGGERS: Activates per-coin sweep and spacebar (0x20) loop ONLY when the truck fully leaves the parking spot.
-[+] IDLE STATE: Safe floating at +9 Y over the truck when parked.
+[+] ADOPT ME AutoFarm GUI v1
+[+] Truck and Compass Coins autofarm
+[+] Beam Autofarm
+[+] Bucket Autofarm
+[+] Button Tps for Event.
 ]]
-
+textprint = "--- ADOPT ME AUTO-FARM V1 (Still testing)" 
 local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
@@ -19,36 +19,27 @@ local config = {
     CoinLogs = false 
 }
 
--- Coordenadas estáticas de reposo absolutas
 local PARKED_X = -325.63
 local PARKED_Y = 32.07
 local PARKED_Z = -1439.19
 
 UI.AddTab("AutoFarm", function(tab)
     local sec = tab:Section("Configuration", "Left")
-    
-    -- GRUPO TRUCK
     sec:Toggle("truck_toggle", "Truck Idle & Token Farm", config.Truck_AutoFarm, function(state)
         config.Truck_AutoFarm = state
     end)
-
-    -- GRUPO TOKENS / COINS
     sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
         config.Token_AutoFarm = state
     end)
     sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 2, function(val)
         config.Token_Cooldown = val / 100
     end)
-
-    -- GRUPO BEAMS
     sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
         config.Beam_AutoFarm = state
     end)
     sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Beam_Cooldown = val / 100
     end)
-    
-    -- RESTO DE CONFIGURACIÓN
     sec:Toggle("bucket_toggle", "Bucket AutoFarm", config.Bucket_AutoFarm, function(state)
         config.Bucket_AutoFarm = state
     end)
@@ -59,9 +50,7 @@ UI.AddTab("AutoFarm", function(tab)
         config.LOGS = state
     end)
 
-    -- SECCIÓN DE ACCIONES Y TELETRANSPORTES
     local secTP = tab:Section("Instant Actions & TPs", "Right")
-    
     secTP:Button("TP to Bucket", function()
         local character = game.Players.LocalPlayer.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
@@ -77,7 +66,6 @@ UI.AddTab("AutoFarm", function(tab)
             end
         end
     end)
-
     secTP:Button("TP to Truck", function()
         local character = game.Players.LocalPlayer.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
@@ -98,7 +86,6 @@ UI.AddTab("AutoFarm", function(tab)
             end
         end
     end)
-
     secTP:Button("TP to Water Tank", function()
         local character = game.Players.LocalPlayer.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
@@ -109,11 +96,8 @@ UI.AddTab("AutoFarm", function(tab)
         end
     end)
 end)
-
 local ScanCooldown = 0.3 
 local player = game.Players.LocalPlayer
-
--- BUSCADOR DEL COMPONENTE ESPECÍFICO DEL CAMIÓN
 local function GetTruckMeshInstance()
     local interiors = workspace:FindFirstChild("Interiors")
     if interiors then
@@ -134,8 +118,7 @@ local function GetTruckMeshInstance()
     return nil
 end
 
-print("--- ADOPT ME AUTO-FARM V3.7 (FLOAT TOLERANCE PATCH) ---")
-
+print(textprint)
 task.spawn(function()
     while true do
         if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Bucket_AutoFarm and not config.Truck_AutoFarm then 
@@ -148,27 +131,21 @@ task.spawn(function()
 
         if hrp then
             local truckPart = GetTruckMeshInstance()
-
-            -- 1. CONTROL INTELIGENTE CON TOLERANCIA MATEMÁTICA
             if config.Truck_AutoFarm and truckPart then
                 
                 local isTruckMoving = false
                 if truckPart.Parent then
                     local currentPos = truckPart.Position
-                    
-                    -- Margen delta para mitigar imprecisiones de coma flotante del motor físico
                     local deltaX = math.abs(currentPos.X - PARKED_X)
                     local deltaY = math.abs(currentPos.Y - PARKED_Y)
                     local deltaZ = math.abs(currentPos.Z - PARKED_Z)
-                    
-                    -- Si el camión se desplaza más de 0.1 unidades en cualquier eje, se considera en movimiento
-                    if deltaX > 0.1 or deltaY > 0.1 or deltaZ > 0.1 then
+
+                    if deltaX > 1 or deltaY > 1 or deltaZ > 1 then
                         isTruckMoving = true
                     end
                 end
 
                 if isTruckMoving then
-                    -- [FASE EN MOVIMIENTO] Escaneo de monedas activas
                     local tokens = {}
                     local children = workspace:GetChildren()
                     
@@ -185,8 +162,6 @@ task.spawn(function()
                             if config.CoinLogs then
                                 print("--- [CoinLog] Token detected: " .. tostring(token:GetFullName()))
                             end
-
-                            -- Validación de estabilidad
                             if not token or not token.Parent or not token:IsA("BasePart") then
                                 task.wait(0.01)
                                 if not token or not token.Parent or not token:IsA("BasePart") then
@@ -204,12 +179,10 @@ task.spawn(function()
                                     end
                                 end
 
-                                -- TP directo al Coin
                                 hrp.Velocity = Vector3.new(0, 0, 0)
                                 hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
                                 task.wait(0.01)
 
-                                -- Salto dedicado con barra espaciadora
                                 if keypress and keyrelease then
                                     keypress(0x20)
                                     task.wait(0.04)
@@ -220,16 +193,13 @@ task.spawn(function()
                             end
                         end
                     else
-                        -- Retorno a la parte superior si se vació el tramo actual en movimiento
                         if truckPart.Parent and hrp then
                             hrp.Velocity = Vector3.new(0, 0, 0)
                             hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
                         end
                     end
                 else
-                    -- [FASE ESTACIONADO / REPOSO] Ignorar por completo y mantener reposo pasivo a +9 sin bucles de TP
                     if truckPart.Parent and hrp then
-                        -- Solo ajusta la posición de reposo una vez si se cae, evitando spam por tick
                         local distToIdle = (hrp.Position - (truckPart.Position + Vector3.new(0, 9, 0))).Magnitude
                         if distToIdle > 2 then
                             hrp.Velocity = Vector3.new(0, 0, 0)
@@ -238,18 +208,14 @@ task.spawn(function()
                     end
                 end
                 
-                task.wait(0.1) -- Cooldown de escaneo de camión ligeramente suavizado para estabilidad
+                task.wait(0.1)
                 continue
             end
-
-            -- 2. RUTINA DE GRANJA GENERAL (CUANDO TRUCK ESTÁ APAGADO O INACTIVO)
             local currentTargets = {}
             local allChildren = workspace:GetChildren()
             
             for i = 1, #allChildren do
                 local child = allChildren[i]
-                
-                -- Haces de Luz
                 if config.Beam_AutoFarm and child.Name == "SmallLightBeam" then
                     if child:IsA("BasePart") then
                         table.insert(currentTargets, {Part = child, Type = "Beam"})
@@ -257,8 +223,6 @@ task.spawn(function()
                         local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
                         if primary then table.insert(currentTargets, {Part = primary, Type = "Beam"}) end
                     end
-                
-                -- Monedas Sueltas
                 elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
                     local colliderPart = child:FindFirstChild("Collider")
                     if colliderPart and colliderPart:IsA("BasePart") then
@@ -266,8 +230,6 @@ task.spawn(function()
                     elseif child:IsA("BasePart") then
                         table.insert(currentTargets, {Part = child, Type = "Token"})
                     end
-
-                -- Baldes
                 elseif config.Bucket_AutoFarm and child.Name == "Bucket" then
                     local rootPart = child:FindFirstChild("Root")
                     if rootPart and rootPart:IsA("BasePart") then
@@ -282,17 +244,14 @@ task.spawn(function()
                     local itemType = item.Type
 
                     if target and target.Parent and hrp and target:IsA("BasePart") then
-
                         if itemType == "Bucket" and config.Bucket_AutoFarm then
                             if target.Position then
                                 hrp.Velocity = Vector3.new(0, 0, 0)
                                 hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
                                 task.wait(1.0)
-
                                 hrp.Velocity = Vector3.new(0, 0, 0)
                                 hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
                                 task.wait(1.0)
-
                                 if keypress and keyrelease then
                                     keypress(0x45)
                                     task.wait(0.5)
@@ -312,7 +271,6 @@ task.spawn(function()
                                 hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
                                 task.wait(config.Token_Cooldown)
                             end
-
                         elseif itemType == "Beam" and config.Beam_AutoFarm then
                             local targetPos = target.Position
                             if targetPos then
