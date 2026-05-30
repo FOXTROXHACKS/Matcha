@@ -1,32 +1,48 @@
 --[[
-[+] ADOPT ME AutoFarm GUI v1.4
-[+] OPTIMIZED: Removed internal 1s delays from Token/Beam collections for maximum speed.
-[+] CUSTOM ACTION SCRIPT: Bucket Detection Sequential Routine
-[+] Hex Key Events Incorporated (E = 0x45)
-[+] Fixed Token Filter (game.Workspace.TokenPickup.Collider)
+[+] ADOPT ME AutoFarm GUI v1.8
+[+] OPTIMIZED: Removed all global variables (_G) and replaced with a local config table.
+[+] FIXED GUI: Stable unique keys for Matcha engine stability.
+[+] INDEPENDENT SLIDERS: Separate Cooldowns for Beams and Tokens
+[+] Custom Action Script: Bucket Sequential Routine (E = 0x45)
 ]]
-_G.Beam_AutoFarm = true
-_G.Token_AutoFarm = true
-_G.Bucket_AutoFarm = true
-_G.TP_Cooldown = 0.05
-_G.LOGS = false
+
+-- Tabla de configuración local (reemplaza por completo a _G)
+local config = {
+    Beam_AutoFarm = true,
+    Beam_Cooldown = 0.05,
+    
+    Token_AutoFarm = true,
+    Token_Cooldown = 0.02,
+    
+    Bucket_AutoFarm = true,
+    LOGS = false
+}
 
 UI.AddTab("AutoFarm", function(tab)
     local sec = tab:Section("Configuration", "Left")
-    sec:Toggle("beam_autofarm", "Light Beam AutoFarm", _G.Beam_AutoFarm, function(state)
-        _G.Beam_AutoFarm = state
+    
+    -- GRUPO BEAMS
+    sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
+        config.Beam_AutoFarm = state
     end)
-    sec:Toggle("token_autofarm", "Token/Coins AutoFarm", _G.Token_AutoFarm, function(state)
-        _G.Token_AutoFarm = state
+    sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
+        config.Beam_Cooldown = val / 100
     end)
-    sec:Toggle("bucket_autofarm", "Bucket AutoFarm", _G.Bucket_AutoFarm, function(state)
-        _G.Bucket_AutoFarm = state
+    
+    -- GRUPO TOKENS / COINS
+    sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
+        config.Token_AutoFarm = state
     end)
-    sec:SliderInt("tp_cooldown_slider", "TP Cooldown (ms)", 1, 100, 5, function(val)
-        _G.TP_Cooldown = val / 100
+    sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 2, function(val)
+        config.Token_Cooldown = val / 100
     end)
-    sec:Toggle("logs_toggle", "Position Logs", _G.LOGS, function(state)
-        _G.LOGS = state
+    
+    -- RESTO DE CONFIGURACIÓN
+    sec:Toggle("bucket_toggle", "Bucket AutoFarm", config.Bucket_AutoFarm, function(state)
+        config.Bucket_AutoFarm = state
+    end)
+    sec:Toggle("logs_toggle", "Position Logs", config.LOGS, function(state)
+        config.LOGS = state
     end)
 
     -- SECCIÓN DE ACCIONES Y TELETRANSPORTES
@@ -70,17 +86,15 @@ UI.AddTab("AutoFarm", function(tab)
     end)
 end)
 
-local ScanCooldown = 0.3 -- Tiempo de espera si no hay nada en el mapa
+local ScanCooldown = 0.3 
 local TotalItemsFound = 0
-
 local player = game.Players.LocalPlayer
-local recolectando = false
 
-print("--- ADOPT ME AUTO-FARM V1.4 LOADED (MAX SPEED COINS) ---")
+print("--- ADOPT ME AUTO-FARM V1.8 LOADED (LOCAL STORAGE) ---")
 
 task.spawn(function()
     while true do
-        if not _G.Beam_AutoFarm and not _G.Token_AutoFarm and not _G.Bucket_AutoFarm then 
+        if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Bucket_AutoFarm then 
             task.wait(0.5) 
             continue 
         end
@@ -96,7 +110,7 @@ task.spawn(function()
                 local child = allChildren[i]
                 
                 -- 1. Light Beams
-                if _G.Beam_AutoFarm and child.Name == "SmallLightBeam" then
+                if config.Beam_AutoFarm and child.Name == "SmallLightBeam" then
                     if child:IsA("BasePart") then
                         table.insert(currentTargets, {Part = child, Type = "Beam"})
                     elseif child:IsA("Model") then
@@ -104,8 +118,8 @@ task.spawn(function()
                         if primary then table.insert(currentTargets, {Part = primary, Type = "Beam"}) end
                     end
                 
-                -- 2. Monedas / Tokens (game.Workspace.TokenPickup.Collider)
-                elseif _G.Token_AutoFarm and child.Name == "TokenPickup" then
+                -- 2. Monedas / Tokens
+                elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
                     local colliderPart = child:FindFirstChild("Collider")
                     if colliderPart and colliderPart:IsA("BasePart") then
                         table.insert(currentTargets, {Part = colliderPart, Type = "Token"})
@@ -114,7 +128,7 @@ task.spawn(function()
                     end
 
                 -- 3. Buckets
-                elseif _G.Bucket_AutoFarm and child.Name == "Bucket" then
+                elseif config.Bucket_AutoFarm and child.Name == "Bucket" then
                     local rootPart = child:FindFirstChild("Root")
                     if rootPart and rootPart:IsA("BasePart") then
                         table.insert(currentTargets, {Part = rootPart, Type = "Bucket"})
@@ -123,15 +137,14 @@ task.spawn(function()
             end
 
             if #currentTargets > 0 then
-                recolectando = true
                 for _, item in ipairs(currentTargets) do
                     local target = item.Part
                     local itemType = item.Type
 
                     if target and target.Parent and hrp and target:IsA("BasePart") then
                         
-                        -- LÓGICA SECUENCIAL PARA EL BUCKET (Mantiene sus tiempos específicos)
-                        if itemType == "Bucket" then
+                        -- SECUENCIA COMPLETA DEL BUCKET
+                        if itemType == "Bucket" and config.Bucket_AutoFarm then
                             hrp.Velocity = Vector3.new(0, 0, 0)
                             hrp.Position = target.Position + Vector3.new(0, 1.5, 0)
                             task.wait(0.2)
@@ -150,36 +163,45 @@ task.spawn(function()
                             hrp.Velocity = Vector3.new(0, 0, 0)
                             hrp.Position = Vector3.new(-322.07, 31.03 + 1.5, -1447.33)
                             
-                            if _G.LOGS then
+                            if config.LOGS then
                                 print("[AdoptMe Sequential] Processed Bucket -> Water -> Truck!")
                             end
 
                             task.wait(2)
                         
-                        -- LÓGICA ULTRA RÁPIDA PARA BEAMS Y TOKENS (Usa el slider de la UI)
-                        else
+                        -- RECOLECCIÓN RÁPIDA CON COOLDOWNS LOCALES
+                        elseif itemType == "Token" and config.Token_AutoFarm then
                             local targetPos = target.Position
                             if targetPos then
                                 hrp.Velocity = Vector3.new(0, 0, 0)
                                 hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
                                 
-                                if _G.LOGS then
+                                if config.LOGS then
                                     TotalItemsFound = TotalItemsFound + 1
-                                    print("[AdoptMe Farm] Collected: " .. tostring(itemType) .. " [Total: " .. TotalItemsFound .. "]")
+                                    print("[AdoptMe Farm] Collected: Token [Total: " .. TotalItemsFound .. "]")
                                 end
+                                task.wait(config.Token_Cooldown)
+                            end
+
+                        elseif itemType == "Beam" and config.Beam_AutoFarm then
+                            local targetPos = target.Position
+                            if targetPos then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
                                 
-                                -- Espera estrictamente lo que marque tu slider de Cooldown (ej: 0.05s)
-                                task.wait(_G.TP_Cooldown)
+                                if config.LOGS then
+                                    TotalItemsFound = TotalItemsFound + 1
+                                    print("[AdoptMe Farm] Collected: Beam [Total: " .. TotalItemsFound .. "]")
+                                end
+                                task.wait(config.Beam_Cooldown)
                             end
                         end
 
                     end
                 end
-            else                recolectando = false
             end
         end
         
-        -- Pausa del bucle principal al terminar una ronda de escaneo
-        task.wait(recolectando and _G.TP_Cooldown or ScanCooldown)
+        task.wait(ScanCooldown)
     end
 end)
