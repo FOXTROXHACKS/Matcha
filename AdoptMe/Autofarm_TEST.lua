@@ -1,15 +1,10 @@
 --[[
-[+] Adopt Me AutoFarm GUI v1.1.2
-[+] [FIXED] Tokens left behind
-[+] [UPDATED] Aggressive sweeping loop that doesn't stop until workspace is completely clear.
-]]
---[[
-[+] Adopt Me AutoFarm GUI v1.1.2 (Bison Lock + Physics Drop Fix)
+[+] Adopt Me AutoFarm GUI v1.1.3 (Bison Ignore Fix)
 [+] [REMOVED] WASD spam function completely deleted.
-[+] [UPDATED] Truck tokens now use a physical drop (Y + 4.5) to ensure collection.
-[+] [FIXED] Stays 100% on truck when Bison is active, no random TPs out.
+[+] [UPDATED] Truck tokens now use a physical drop (Y + 2.5) to ensure collection.
+[+] [FIXED] If Bison is active, the script COMPLETELY IGNORES the truck (no TPs to it).
 ]]
-textprint = "--- ADOPT ME AUTO-FARM V1.1.2 (Physics Drop Edition)" 
+textprint = "--- ADOPT ME AUTO-FARM V1.1.3 (Bison Ignore Fix)" 
 local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
@@ -196,7 +191,7 @@ task.spawn(function()
 
             if config.Truck_AutoFarm and truckPart then
                 if not bisonActive then
-                    -- Camión en movimiento: Farmea monedas locales con SISTEMA DE CAÍDA
+                    -- Camión en el mapa y NO hay bisonte: Farmea monedas locales con SISTEMA DE CAÍDA
                     local tokens = {}
                     local children = workspace:GetChildren()
                     
@@ -215,7 +210,7 @@ task.spawn(function()
                             end
                             local successPos, targetPos = pcall(function() return token.Position end)
                             if successPos and targetPos and hrp then
-                                -- SISTEMA DE CAÍDA: TP a 2.5 studs de altura y ligero empuje hacia abajo
+                                -- SISTEMA DE CAÍDA: TP a 4.5 studs de altura y ligero empuje hacia abajo
                                 hrp.Velocity = Vector3.new(0, -10, 0) 
                                 hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
                                 
@@ -223,25 +218,18 @@ task.spawn(function()
                             end
                         end
                     else
-                        -- Si no hay monedas y no hay bisonte, quédate encima del camión
+                        -- Si no hay monedas, quédate encima del camión
                         if truckPart.Parent and hrp then
                             hrp.Velocity = Vector3.new(0, 0, 0)
                             hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
                         end
                     end
-                else
-                    -- ¡EL BISONTE ESTÁ ACTIVO! Te ancla arriba del camión y corta el ciclo aquí mismo
-                    if truckPart.Parent and hrp then
-                        hrp.Velocity = Vector3.new(0, 0, 0)
-                        hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
-                    end
-                    task.wait(0.1)
-                    continue -- Evita por completo que lea el código de abajo (general token farm)
-                end
-                if not bisonActive then
+                    
                     task.wait(0.05)
-                    continue
+                    continue -- Se queda en el ciclo del camión mientras no haya bisonte
                 end
+                -- Si bisonActive es TRUE, simplemente no hace nada de lo anterior.
+                -- No te ancla al camión, ignora esta sección y pasa a la de abajo (o te deja libre).
             end
 
             -- [3] GENERAL LIGHT BEAM & TOKEN FARM (Solo corre si el camión no tiene prioridad/bisonte)
