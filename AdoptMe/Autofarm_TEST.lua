@@ -1,10 +1,10 @@
 --[[
-[+] Adopt Me AutoFarm GUI v1.1.1
-[+] [FIXED] Double-Check Scan added to prevent network lag from skipping coins.
-[+] [FIXED] Truck and Compass Coins autofarm  (spam tp to truck when is not moving was fixed, it will only teleport when is in movement.)
-[+] [UPDATED] Bucket Autofarm (after giving the bucket, it should pick up the coins)
+[+] Adopt Me AutoFarm GUI v1.1.2
+[+] [REMOVED] TriggerWASD completely to optimize performance.
+[+] [FIXED] Tokens left behind by replacing WASD with a 3.5-stud vertical drop collision.
+[+] [UPDATED] Aggressive sweeping loop that doesn't stop until workspace is completely clear.
 ]]
-textprint = "--- ADOPT ME AUTO-FARM V1.1.1 (Double-Check Verification)" 
+textprint = "--- ADOPT ME AUTO-FARM V1.1.2 (Aggressive Drop Sweeper)" 
 local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
@@ -95,24 +95,6 @@ end)
 local ScanCooldown = 0.2 
 local player = game.Players.LocalPlayer
 
-local function TriggerWASD()
-    if keypress and keyrelease then
-        keypress(0x57) -- W
-        task.wait(0.1)
-        keypress(0x41) -- A
-        task.wait(0.1)
-        keyrelease(0x57)
-        keyrelease(0x41)
-        task.wait(0.05)
-        keypress(0x53) -- S
-        task.wait(0.1)
-        keypress(0x44) -- D
-        task.wait(0.1)
-        keyrelease(0x53)
-        keyrelease(0x44)
-    end
-end
-
 local function GetTruckMeshInstance()
     local interiors = workspace:FindFirstChild("Interiors")
     if interiors then
@@ -172,47 +154,25 @@ task.spawn(function()
                 hrp.Position = Vector3.new(-322.07, 31.03 + 1.5, -1447.33)
                 task.wait(0.5)
 
-                if config.CoinLogs then print("--- [Sequence] Bucket delivered. Waiting 0.3 seconds for coins...") end
-                task.wait(0.3)
-
+                if config.CoinLogs then print("--- [Sequence] Bucket delivered. Sweeping spawned tokens...") end
+                
+                -- BUCLE AGRESIVO POST-BALDE (No sale hasta limpiar todo)
                 if config.Token_AutoFarm then
-                    if config.CoinLogs then print("--- [Sequence] Cleaning spawned coins from the map...") end
-                    
-                    -- [CHEQUEO 1: RECOLECCIÓN INICIAL EN BALDE]
-                    local children = workspace:GetChildren()
-                    local immediateTokens = {}
-                    for i = 1, #children do
-                        local child = children[i]
-                        if child.Name == "TokenPickup" then
-                            local col = child:FindFirstChild("Collider") or child
-                            if col:IsA("BasePart") then table.insert(immediateTokens, col) end
-                        end
-                    end
-                    if #immediateTokens > 0 then
-                        task.wait(0.2)
-                        for _, token in ipairs(immediateTokens) do
-                            if token and token.Parent and token:IsA("BasePart") and hrp then
-                                hrp.Velocity = Vector3.new(0, 0, 0)
-                                hrp.Position = token.Position + Vector3.new(0, 1.5, 0)
-                                task.wait(config.Token_Cooldown)
+                    local startTime = os.clock()
+                    while workspace:FindFirstChild("TokenPickup") and (os.clock() - startTime < 4) do
+                        local children = workspace:GetChildren()
+                        for i = 1, #children do
+                            local child = children[i]
+                            if child.Name == "TokenPickup" then
+                                local col = child:FindFirstChild("Collider") or child
+                                if col and col.Parent and col:IsA("BasePart") and hrp then
+                                    hrp.Velocity = Vector3.new(0, 0, 0)
+                                    hrp.Position = col.Position + Vector3.new(0, 3.5, 0) -- Caída física
+                                    task.wait(config.Token_Cooldown)
+                                end
                             end
                         end
-                    end
-                    
-                    -- [CHEQUEO 2: VERIFICACIÓN POST-BALDE]
-                    task.wait(0.1) -- Breve respiro para sincronizar con la red
-                    local leftoverChildren = workspace:GetChildren()
-                    for i = 1, #leftoverChildren do
-                        local child = leftoverChildren[i]
-                        if child.Name == "TokenPickup" then
-                            local col = child:FindFirstChild("Collider") or child
-                            if col and col.Parent and col:IsA("BasePart") and hrp then
-                                if config.CoinLogs then print("--- [Double-Check] Found skipped coin. Recovering...") end
-                                hrp.Velocity = Vector3.new(0, 0, 0)
-                                hrp.Position = col.Position + Vector3.new(0, 1.5, 0)
-                                task.wait(config.Token_Cooldown + 0.02) -- Margen extra por seguridad en el re-intento
-                            end
-                        end
+                        task.wait(0.01)
                     end
                 end
                 continue 
@@ -223,47 +183,27 @@ task.spawn(function()
 
             if config.Truck_AutoFarm and truckPart then
                 if not bisonActive then
-                    local tokens = {}
-                    local children = workspace:GetChildren()
-                    
-                    for i = 1, #children do
-                        local child = children[i]
-                        if child.Name == "TokenPickup" then
-                            local col = child:FindFirstChild("Collider") or child
-                            if col:IsA("BasePart") then table.insert(tokens, col) end
-                        end
-                    end
-                    if #tokens > 0 then
-                        for _, token in ipairs(tokens) do
+                    -- BUCLE AGRESIVO EN TRUCK (Limpia tokens con caída de gravedad)
+                    if workspace:FindFirstChild("TokenPickup") then
+                        while workspace:FindFirstChild("TokenPickup") do
                             if config.Bucket_AutoFarm and workspace:FindFirstChild("Bucket") then break end
-                            if not token or not token.Parent or not token:IsA("BasePart") then
-                                continue
-                            end
-                            local successPos, targetPos = pcall(function() return token.Position end)
-                            if successPos and targetPos and hrp then
-                                hrp.Velocity = Vector3.new(0, 0, 0)
-                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                
-                                TriggerWASD() 
-                                task.wait(config.Token_Cooldown)
-                            end
-                        end
-                        
-                        -- [CHEQUEO 2: VERIFICACIÓN EN CAMIÓN]
-                        task.wait(0.05)
-                        local checkChildren = workspace:GetChildren()
-                        for i = 1, #checkChildren do
-                            if config.Bucket_AutoFarm and workspace:FindFirstChild("Bucket") then break end
-                            local child = checkChildren[i]
-                            if child.Name == "TokenPickup" then
-                                local col = child:FindFirstChild("Collider") or child
-                                if col and col.Parent and col:IsA("BasePart") and hrp then
-                                    hrp.Velocity = Vector3.new(0, 0, 0)
-                                    hrp.Position = col.Position + Vector3.new(0, 1.5, 0)
-                                    TriggerWASD()
-                                    task.wait(config.Token_Cooldown + 0.01)
+                            local children = workspace:GetChildren()
+                            local foundToken = false
+                            
+                            for i = 1, #children do
+                                local child = children[i]
+                                if child.Name == "TokenPickup" then
+                                    local col = child:FindFirstChild("Collider") or child
+                                    if col and col.Parent and col:IsA("BasePart") and hrp then
+                                        foundToken = true
+                                        hrp.Velocity = Vector3.new(0, 0, 0)
+                                        hrp.Position = col.Position + Vector3.new(0, 3.5, 0) -- Caída de 3.5 studs en lugar de WASD
+                                        task.wait(config.Token_Cooldown)
+                                    end
                                 end
                             end
+                            if not foundToken then break end
+                            task.wait(0.01)
                         end
                     else
                         if truckPart.Parent and hrp then
@@ -286,64 +226,41 @@ task.spawn(function()
                 end
             end
 
-            -- [ ESCÁNER GENERAL CON VERIFICACIÓN INTEGRADA ]
-            local currentTargets = {}
-            local allChildren = workspace:GetChildren()
-            
-            for i = 1, #allChildren do
-                local child = allChildren[i]
-                if config.Beam_AutoFarm and child.Name == "SmallLightBeam" then
-                    if child:IsA("BasePart") then
-                        table.insert(currentTargets, {Part = child, Type = "Beam"})
-                    elseif child:IsA("Model") then
-                        local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
-                        if primary then table.insert(currentTargets, {Part = primary, Type = "Beam"}) end
-                    end
-                elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
-                    local colliderPart = child:FindFirstChild("Collider")
-                    if colliderPart and colliderPart:IsA("BasePart") then
-                        table.insert(currentTargets, {Part = colliderPart, Type = "Token"})
-                    elseif child:IsA("BasePart") then
-                        table.insert(currentTargets, {Part = child, Type = "Token"})
-                    end
-                end
-            end
-            
-            if #currentTargets > 0 then
-                for _, item in ipairs(currentTargets) do
+            -- [ ESCÁNER GENERAL CON BUCLE DE BARRIDO CONSTANTE ]
+            if config.Token_AutoFarm and workspace:FindFirstChild("TokenPickup") then
+                while workspace:FindFirstChild("TokenPickup") do
                     if config.Bucket_AutoFarm and workspace:FindFirstChild("Bucket") then break end
-                    local target = item.Part
-                    local itemType = item.Type
-
-                    if target and target.Parent and hrp and target:IsA("BasePart") then
-                        local targetPos = target.Position
-                        if targetPos then
-                            hrp.Velocity = Vector3.new(0, 0, 0)
-                            hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                                                        
-                            if itemType == "Token" and config.Token_AutoFarm then
-                                task.wait(config.Token_Cooldown)
-                            elseif itemType == "Beam" and config.Beam_AutoFarm then
-                                task.wait(config.Beam_Cooldown)
-                            end
-                        end
-                    end
-                end
-                
-                -- [CHEQUEO 2: LIMPIEZA FINAL DEL ESCÁNER GENERAL]
-                if config.Token_AutoFarm then
-                    task.wait(0.05)
-                    local finalChildren = workspace:GetChildren()
-                    for i = 1, #finalChildren do
-                        if config.Bucket_AutoFarm and workspace:FindFirstChild("Bucket") then break end
-                        local child = finalChildren[i]
+                    local allChildren = workspace:GetChildren()
+                    local tokenProcessed = false
+                    
+                    for i = 1, #allChildren do
+                        local child = allChildren[i]
                         if child.Name == "TokenPickup" then
                             local col = child:FindFirstChild("Collider") or child
                             if col and col.Parent and col:IsA("BasePart") and hrp then
+                                tokenProcessed = true
                                 hrp.Velocity = Vector3.new(0, 0, 0)
-                                hrp.Position = col.Position + Vector3.new(0, 1.5, 0)
+                                hrp.Position = col.Position + Vector3.new(0, 3.5, 0) -- Caída física
                                 task.wait(config.Token_Cooldown)
                             end
+                        end
+                    end
+                    if not tokenProcessed then break end
+                    task.wait(0.01)
+                end
+            end
+
+            -- Procesamiento alternativo para Beams si están activos
+            if config.Beam_AutoFarm then
+                local allChildren = workspace:GetChildren()
+                for i = 1, #allChildren do
+                    local child = allChildren[i]
+                    if child.Name == "SmallLightBeam" and hrp then
+                        local targetPart = child:IsA("BasePart") and child or child:FindFirstChildWhichIsA("BasePart")
+                        if targetPart then
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = targetPart.Position + Vector3.new(0, 1.5, 0)
+                            task.wait(config.Beam_Cooldown)
                         end
                     end
                 end
