@@ -23,6 +23,7 @@ UI.AddTab("Duels", function(tab)
         Cooldown_Duels = val / 100
     end)
 end)
+
 task.spawn(function()
     while true do
         if not UI.GetValue("duels_toggle") then 
@@ -32,12 +33,20 @@ task.spawn(function()
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         if hrp then
-            local items = spawnablesFolder:GetChildren()
-            if #items > 0 then
-                for _, item in ipairs(items) do
+            local folders = spawnablesFolder:GetChildren()
+            local foundItems = {}
+            for _, folder in ipairs(folders) do
+                local cylinder = folder:FindFirstChild("Cylinder")
+                if cylinder and cylinder:IsA("BasePart") then
+                    table.insert(foundItems, cylinder)
+                end
+            end
+
+            if #foundItems > 0 then
+                for _, item in ipairs(foundItems) do
                     if not UI.GetValue("duels_toggle") then break end
 
-                    if item:IsA("MeshPart") and item.Parent ~= nil then
+                    if item.Parent ~= nil then
                         pcall(function()
                             hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0)
                         end)
