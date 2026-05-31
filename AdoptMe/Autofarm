@@ -189,8 +189,8 @@ task.spawn(function()
                         end
                     end
                     if #immediateTokens > 0 then
-                        for _, token in ipairs(immediateTokens) do
                         task.wait(0.2)
+                        for _, token in ipairs(immediateTokens) do
                             if token and token.Parent and token:IsA("BasePart") and hrp then
                                 hrp.Velocity = Vector3.new(0, 0, 0)
                                 hrp.Position = token.Position + Vector3.new(0, 1.5, 0)
