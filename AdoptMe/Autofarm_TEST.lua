@@ -1,0 +1,324 @@
+--[[
+[+] ADOPT ME AutoFarm GUI v1.2 (Sincronización Exacta de Baldes y Monedas)
+[+] Truck and Compass Coins autofarm
+[+] Beam Autofarm
+[+] Bucket Autofarm + Pausa de 0.5s + Limpieza de Monedas instantánea
+[+] Button Tps for Event.
+]]
+textprint = "--- ADOPT ME AUTO-FARM V1.2 (Sincronización de Tiempos)" 
+local config = {
+    Beam_AutoFarm = false,
+    Beam_Cooldown = 0.05,
+    
+    Token_AutoFarm = true,
+    Token_Cooldown = 0.02,
+    
+    Truck_AutoFarm = true,
+    Bucket_AutoFarm = true,
+    LOGS = false,
+    CoinLogs = false 
+}
+
+UI.AddTab("AutoFarm", function(tab)
+    local sec = tab:Section("Configuration", "Left")
+    sec:Toggle("truck_toggle", "Truck Idle & Token Farm", config.Truck_AutoFarm, function(state)
+        config.Truck_AutoFarm = state
+    end)
+    sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
+        config.Token_AutoFarm = state
+    end)
+    sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 2, function(val)
+        config.Token_Cooldown = val / 100
+    end)
+    sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
+        config.Beam_AutoFarm = state
+    end)
+    sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
+        config.Beam_Cooldown = val / 100
+    end)
+    sec:Toggle("bucket_toggle", "Bucket AutoFarm", config.Bucket_AutoFarm, function(state)
+        config.Bucket_AutoFarm = state
+    end)
+    sec:Toggle("coin_logs_toggle", "Coin Logs & Errors", config.CoinLogs, function(state) 
+        config.CoinLogs = state
+    end)
+    sec:Toggle("logs_toggle", "Position Logs", config.LOGS, function(state)
+        config.LOGS = state
+    end)
+
+    local secTP = tab:Section("Instant Actions & TPs", "Right")
+    secTP:Button("TP to Bucket", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local bucket = workspace:FindFirstChild("Bucket")
+            local rootPart = bucket and bucket:FindFirstChild("Root")
+            if rootPart and rootPart:IsA("BasePart") then
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.Position = rootPart.Position + Vector3.new(0, 1.5, 0)
+                print("--- [Manual TP] Teleported to Bucket successfully!")
+            else
+                print("--- [Manual TP] Bucket not found in workspace.")
+            end
+        end
+    end)
+    secTP:Button("TP to Truck", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local interiors = workspace:FindFirstChild("Interiors")
+            local mainMap = interiors and interiors:FindFirstChild("MainMap!Default")
+            local truck = mainMap and mainMap:FindFirstChild("Truck")
+            local geometry = truck and truck:FindFirstChild("Geometry")
+            local poly = geometry and geometry:FindFirstChild("polySurface95")
+            
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            if poly and poly:IsA("BasePart") then
+                hrp.Position = poly.Position + Vector3.new(0, 9, 0)
+                print("--- [Manual TP] Teleported on top of Truck Mesh (+9)!")
+            else
+                hrp.Position = Vector3.new(-322.07, 31.03 + 9, -1447.33)
+                print("--- [Manual TP] Truck Mesh not found. Using safe fixed backup coordinates (+9)!")
+            end
+        end
+    end)
+    secTP:Button("TP to Water Tank", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
+            print("--- [Manual TP] Teleported to Water Tank Position!")
+        end
+    end)
+end)
+
+local ScanCooldown = 0.2 
+local player = game.Players.LocalPlayer
+
+-- Función auxiliar para presionar WASD de manera ultra rápida y eficiente
+local function TriggerWASD()
+    if keypress and keyrelease then
+        keypress(0x57) -- W
+        task.wait(0.1)
+        keypress(0x41) -- A
+        task.wait(0.1)
+        keyrelease(0x57)
+        keyrelease(0x41)
+        task.wait(0.05)
+        keypress(0x53) -- S
+        task.wait(0.1)
+        keypress(0x44) -- D
+        task.wait(0.1)
+        keyrelease(0x53)
+        keyrelease(0x44)
+    end
+end
+
+local function GetTruckMeshInstance()
+    local interiors = workspace:FindFirstChild("Interiors")
+    if interiors then
+        local mainMap = interiors:FindFirstChild("MainMap!Default")
+        if mainMap then
+            local truck = mainMap:FindFirstChild("Truck")
+            if truck then
+                local geometry = truck:FindFirstChild("Geometry")
+                if geometry then
+                    local targetMesh = geometry:FindFirstChild("polySurface95")
+                    if targetMesh and targetMesh:IsA("BasePart") then
+                        return targetMesh
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+print(textprint)
+task.spawn(function()
+    while true do
+        if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Bucket_AutoFarm and not config.Truck_AutoFarm then 
+            task.wait(0.5) 
+            continue 
+        end
+
+        local character = player.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+        if hrp then
+            -- [ PRIORIDAD 1: INTERRUPCIÓN POR BALDES / BUCKETS ]
+            local bucketFound = workspace:FindFirstChild("Bucket")
+            local bucketRoot = bucketFound and bucketFound:FindFirstChild("Root")
+
+            if config.Bucket_AutoFarm and bucketRoot and bucketRoot:IsA("BasePart") then
+                if config.CoinLogs then
+                    print("--- [Priority] Bucket detected! Starting precise bucket-coin sequence.")
+                end
+                
+                -- 1. Ir al Balde
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.Position = bucketRoot.Position + Vector3.new(0, 1.5, 0)
+                task.wait(0.8)
+                
+                -- 2. Ir al Tanque de Agua e interactuar
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
+                task.wait(0.8)
+                
+                if keypress and keyrelease then
+                    keypress(0x45) -- E
+                    task.wait(0.3)
+                    keyrelease(0x45)
+                end
+                task.wait(0.8)
+
+                -- 3. Entregar el balde lleno en el Camión
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.Position = Vector3.new(-322.07, 31.03 + 1.5, -1447.33)
+                task.wait(0.5)
+                
+                -- 4. Esperar medio segundo después de completar el balde
+                if config.CoinLogs then print("--- [Sequence] Bucket delivered. Waiting 0.5 seconds for coins...") end
+                task.wait(0.5)
+                
+                -- 5. Recolección y barrido inmediato de Monedas post-bucket
+                if config.Token_AutoFarm then
+                    if config.CoinLogs then print("--- [Sequence] Cleaning spawned coins from the map...") end
+                    local children = workspace:GetChildren()
+                    local immediateTokens = {}
+                    
+                    for i = 1, #children do
+                        local child = children[i]
+                        if child.Name == "TokenPickup" then
+                            local col = child:FindFirstChild("Collider") or child
+                            if col:IsA("BasePart") then table.insert(immediateTokens, col) end
+                        end
+                    end
+                    
+                    -- Teletransportarse a todas las monedas generadas
+                    if #immediateTokens > 0 then
+                        for _, token in ipairs(immediateTokens) do
+                            if token and token.Parent and token:IsA("BasePart") and hrp then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                               hrp.Position = token.Position + Vector3.new(0, 1.5, 0)
+                                task.wait(config.Token_Cooldown)
+                            end
+                        end
+                    end
+                end
+                
+                continue 
+            end
+
+            -- [ PRIORIDAD 2: CAMIÓN REVISADO POR DETECCIÓN DE BISON ]
+            local bisonActive = workspace:FindFirstChild("Bison")
+            local truckPart = GetTruckMeshInstance()
+
+            if config.Truck_AutoFarm and truckPart then
+                -- Si Bison NO está, el camión se está moviendo/está activo para farmear
+                if not bisonActive then
+                    local tokens = {}
+                    local children = workspace:GetChildren()
+                    
+                    for i = 1, #children do
+                        local child = children[i]
+                        if child.Name == "TokenPickup" then
+                            local col = child:FindFirstChild("Collider") or child
+                            if col:IsA("BasePart") then table.insert(tokens, col) end
+                        end
+                    end
+                    
+                    if #tokens > 0 then
+                        for _, token in ipairs(tokens) do
+                            -- Cortar farm si aparece un balde de imprevisto
+                            if config.Bucket_AutoFarm and workspace:FindFirstChild("Bucket") then break end
+                            
+                            if not token or not token.Parent or not token:IsA("BasePart") then
+                                continue
+                            end
+
+                            local successPos, targetPos = pcall(function() return token.Position end)
+                            if successPos and targetPos and hrp then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                
+                                TriggerWASD() 
+                                task.wait(config.Token_Cooldown)
+                            end
+                        end
+                    else
+                        -- Si no hay monedas pero Bison sigue ausente, quedarse arriba del camión en movimiento
+                        if truckPart.Parent and hrp then
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
+                        end
+                    end
+                else
+                    -- Si Bison SÍ está en el juego, obligamos al script a ignorar el camión o volver a la base si está lejos
+                    if truckPart.Parent and hrp then
+                        local distToIdle = (hrp.Position - (truckPart.Position + Vector3.new(0, 9, 0))).Magnitude
+                        if distToIdle > 2 then
+                            -- Opcional: Descomenta las líneas de abajo si quieres que se quede quieto arriba del camión mientras espera
+                            -- hrp.Velocity = Vector3.new(0, 0, 0)
+                            -- hrp.Position = truckPart.Position + Vector3.new(0, 9, 0)
+                        end
+                    end
+                end
+                
+                -- Permitir que pase directo a las siguientes prioridades (monedas del mapa) si Bison está activo
+                if not bisonActive then
+                    task.wait(0.05)
+                    continue
+                end
+            end
+
+            -- [ PRIORIDAD 3: SCANNER GENERAL ]
+            local currentTargets = {}
+            local allChildren = workspace:GetChildren()
+            
+            for i = 1, #allChildren do
+                local child = allChildren[i]
+                if config.Beam_AutoFarm and child.Name == "SmallLightBeam" then
+                    if child:IsA("BasePart") then
+                        table.insert(currentTargets, {Part = child, Type = "Beam"})
+                    elseif child:IsA("Model") then
+                        local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+                        if primary then table.insert(currentTargets, {Part = primary, Type = "Beam"}) end
+                    end
+                elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
+                    local colliderPart = child:FindFirstChild("Collider")
+                    if colliderPart and colliderPart:IsA("BasePart") then
+                        table.insert(currentTargets, {Part = colliderPart, Type = "Token"})
+                    elseif child:IsA("BasePart") then
+                        table.insert(currentTargets, {Part = child, Type = "Token"})
+                    end
+                end
+            end
+
+            if #currentTargets > 0 then
+                for _, item in ipairs(currentTargets) do
+                    if config.Bucket_AutoFarm and workspace:FindFirstChild("Bucket") then break end
+                    
+                    local target = item.Part
+                    local itemType = item.Type
+
+                    if target and target.Parent and hrp and target:IsA("BasePart") then
+                        local targetPos = target.Position
+                        if targetPos then
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                                                        
+                            if itemType == "Token" and config.Token_AutoFarm then
+                                task.wait(config.Token_Cooldown)
+                            elseif itemType == "Beam" and config.Beam_AutoFarm then
+                                task.wait(config.Beam_Cooldown)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(ScanCooldown)
+    end
+end)
