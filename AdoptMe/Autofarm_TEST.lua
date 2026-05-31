@@ -210,7 +210,7 @@ task.spawn(function()
                             end
                             local successPos, targetPos = pcall(function() return token.Position end)
                             if successPos and targetPos and hrp then
-                                -- SISTEMA DE CAÍDA: TP a 4.5 studs de altura y ligero empuje hacia abajo
+                                -- SISTEMA DE CAÍDA: TP a 2.5 studs de altura y ligero empuje hacia abajo
                                 hrp.Velocity = Vector3.new(0, -10, 0) 
                                 hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
                                 
