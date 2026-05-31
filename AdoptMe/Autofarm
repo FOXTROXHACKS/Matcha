@@ -11,7 +11,7 @@ local config = {
     Beam_Cooldown = 0.05,
     
     Token_AutoFarm = true,
-    Token_Cooldown = 0.02,
+    Token_Cooldown = 0.05,
     
     Truck_AutoFarm = true,
     Bucket_AutoFarm = true,
@@ -27,7 +27,7 @@ UI.AddTab("AutoFarm", function(tab)
     sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
         config.Token_AutoFarm = state
     end)
-    sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 2, function(val)
+    sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Token_Cooldown = val / 100
     end)
     sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
