@@ -1,11 +1,9 @@
 --[[
-[+] ADOPT ME AutoFarm GUI v1.2 (Sincronización Exacta de Baldes y Monedas)
-[+] Truck and Compass Coins autofarm
-[+] Beam Autofarm
-[+] Bucket Autofarm + Pausa de 0.5s + Limpieza de Monedas instantánea
-[+] Button Tps for Event.
+[+] Adopt Me AutoFarm GUI v1.1
+[+] [FIXED] Truck and Compass Coins autofarm  (spam tp to truck when is not moving was fixed, it will only teleport when is in movement.)
+[+] [UPDATED] Bucket Autofarm (after giving the bucket, it should pick up the coins)
 ]]
-textprint = "--- ADOPT ME AUTO-FARM V1.2 (Sincronización de Tiempos)" 
+textprint = "--- ADOPT ME AUTO-FARM V1.1 (Fixes & Updates)" 
 local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
