@@ -1,5 +1,5 @@
 --[[
-[+] Adopt Me AutoFarm GUI v1.1
+[+] Adopt Me AutoFarm GUI V1.1
 [+] [FIXED] Truck and Compass Coins autofarm  (spam tp to truck when is not moving was fixed, it will only teleport when is in movement.)
 [+] [UPDATED] Truck tokens now use a physical drop to ensure collection.
 [+] [UPDATED] Bucket Autofarm (after giving the bucket, it should pick up the coins)
