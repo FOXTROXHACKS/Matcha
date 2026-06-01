@@ -58,14 +58,20 @@ UI.AddTab("AutoFarm", function(tab)
         config.LOGS = state
     end)
     
-    -- [ NUEVA SECCIÓN: ANTI-AFK ]
-    local secAFK = tab:Section("Anti-AFK System", "Left")
-    secAFK:Toggle("anti_afk_toggle", "Enable Anti-AFK (Jump)", config.Anti_AFK, function(state)
+-- [ SECCIÓN MISC UNIFICADA ]
+    local secMisc = tab:Section("MISC", "Right")
+    secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
+        config.LOGS = state
+    end)
+    secMisc:Toggle("anti_afk_toggle", "Anti-AFK (Jump)", config.Anti_AFK, function(state)
         config.Anti_AFK = state
     end)
-    secAFK:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 30, function(val)
+    secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 30, function(val)
         config.Anti_AFK_Time = val
     end)
+
+    local secTP = tab:Section("Instant Actions", "Right")
+    -- ... (botones de TP se mantienen igual)
 
     local secTP = tab:Section("Instant Actions & TPs", "Right")
     secTP:Button("TP to Bucket", function()
@@ -152,10 +158,12 @@ task.spawn(function()
         task.wait(1)
         if config.Anti_AFK then
             elapsed = elapsed + 1
+                task.wait(5)
             if elapsed >= config.Anti_AFK_Time then
                 if keypress and keyrelease then
                     keypress(0x20) -- Espacio (Saltar)
                     task.wait(0.1)
+                    EventLog("Anti-AFK: Jumped")
                     keyrelease(0x20)
                     if config.LOGS then print("--- [Anti-AFK] Saltando para evitar desconexión.") end
                 end
