@@ -1,10 +1,11 @@
 --[[
 [+] Adopt Me AutoFarm GUI V1.2
+[+] [ADDED] Anti-AFK system (makes you jump every 60 seconds by default)
 [+] [ADDED] MISC Section with Anti-AFK and Event Logs.
 [+] [ADDED] Event Log system to track Truck movement, Bucket spawns, and Anti-AFK jumps.
 ]]
 
-local textprint = "--- ADOPT ME AUTO-FARM V1.2 (Misc, Anti-AFK & Fixes)" 
+local textprint = "--- ADOPT ME AUTO-FARM V1.2 (Misc & Fixes)" 
 local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
@@ -16,15 +17,20 @@ local config = {
     Bucket_AutoFarm = true,
     
     Anti_AFK = false,
-    Anti_AFK_Time = 30,
+    Anti_AFK_Time = 60,
     
     LOGS = false,
     CoinLogs = false 
 }
 
-local function EventLog(msg)
+-- Función auxiliar para los Event Logs
+local function EventLog(msg, errr)
     if config.LOGS then
-        print("--- [LOG] " .. msg)
+        if errr == 1 then
+            error("--- [ERR] " .. msg)
+        else
+            warn("--- [LOG] " .. msg)
+        end
     end
 end
 
@@ -48,6 +54,8 @@ UI.AddTab("AutoFarm", function(tab)
     sec:Toggle("bucket_toggle", "Bucket AutoFarm", config.Bucket_AutoFarm, function(state)
         config.Bucket_AutoFarm = state
     end)
+    
+    -- [ NUEVA SECCIÓN MISC ]
     local secMisc = tab:Section("MISC", "Right")
     secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
         config.LOGS = state
@@ -58,7 +66,7 @@ UI.AddTab("AutoFarm", function(tab)
     secMisc:Toggle("anti_afk_toggle", "Anti-AFK (Jump)", config.Anti_AFK, function(state)
         config.Anti_AFK = state
     end)
-    secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 30, function(val)
+    secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 60, function(val)
         config.Anti_AFK_Time = val
     end)
 
@@ -72,9 +80,9 @@ UI.AddTab("AutoFarm", function(tab)
             if rootPart and rootPart:IsA("BasePart") then
                 hrp.Velocity = Vector3.new(0, 0, 0)
                 hrp.Position = rootPart.Position + Vector3.new(0, 1.5, 0)
-                print("--- [Manual TP] Teleported to Bucket successfully!")
+                notify("[Manual TP]","Teleported to Bucket successfully!",5)
             else
-                print("--- [Manual TP] Bucket not found in workspace.")
+                notify("[Manual TP]","Bucket not found in workspace.",5)
             end
         end
     end)
@@ -91,10 +99,10 @@ UI.AddTab("AutoFarm", function(tab)
             hrp.Velocity = Vector3.new(0, 0, 0)
             if poly and poly:IsA("BasePart") then
                 hrp.Position = poly.Position + Vector3.new(0, 9, 0)
-                print("--- [Manual TP] Teleported on top of Truck Mesh (+9)!")
+                notify("[Manual TP]","Teleported on top of Truck Mesh",5)
             else
                 hrp.Position = Vector3.new(-322.07, 31.03 + 9, -1447.33)
-                print("--- [Manual TP] Truck Mesh not found. Using safe fixed backup coordinates (+9)!")
+                notify("[Manual TP]","Truck Mesh not found. Using safe fixed backup coordinates",5)
             end
         end
     end)
@@ -104,7 +112,7 @@ UI.AddTab("AutoFarm", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-340.42, 31.03 + 1.5, -1445.74)
-            print("--- [Manual TP] Teleported to Water Tank Position!")
+            notify("[Manual TP]","Teleported to Water Tank Position!",5)
         end
     end)
 end)
@@ -159,14 +167,12 @@ end)
 local truckWasMoving = false
 local bucketWasSpawned = false
 
--- [ MAIN FARM LOOP ]
 task.spawn(function()
     while true do
         if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Bucket_AutoFarm and not config.Truck_AutoFarm then 
             task.wait(0.5) 
             continue 
         end
-
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         if hrp then
@@ -187,6 +193,7 @@ task.spawn(function()
             else
                 bucketWasSpawned = false
             end
+
 -------------- [1] BUCKET SEQUENCE
             if config.Bucket_AutoFarm and bucketRoot and bucketRoot:IsA("BasePart") then
                 if typeof(bucketRoot.Position) == "Vector3" then
@@ -210,11 +217,11 @@ task.spawn(function()
                     hrp.Position = Vector3.new(-322.07, 31.03 + 1.5, -1447.33)
                     task.wait(0.5)
                     
-                    if config.CoinLogs then print("--- [Sequence] Bucket delivered. Waiting 0.3 seconds for coins...") end
+                    if config.CoinLogs then EventLog("- [Sequence] Bucket delivered. Waiting 0.3 seconds for coins...") end
                     task.wait(0.3)
                     
                     if config.Token_AutoFarm then
-                        if config.CoinLogs then print("--- [Sequence] Cleaning spawned coins from the map...") end
+                        if config.CoinLogs then EventLog("- [Sequence] Cleaning spawned coins from the map...") end
                         local children = workspace:GetChildren()
                         local immediateTokens = {}
                         for i = 1, #children do
@@ -249,7 +256,7 @@ task.spawn(function()
             if config.Truck_AutoFarm and truckPart then
                 if not bisonActive then
                     if not truckWasMoving then
-                        EventLog("Truck is moving, event has started")
+                        EventLog(" - Event Started: Truck is moving, farming event")
                         truckWasMoving = true
                     end
                     
