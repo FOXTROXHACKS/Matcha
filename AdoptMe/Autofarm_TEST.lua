@@ -5,7 +5,7 @@
 [+] [ADDED] Event Log system to track Truck movement, Bucket spawns, and Anti-AFK jumps.
 ]]
 
-local textprint = "--- ADOPT ME AUTO-FARM V1.2 (Misc & Fixes)" 
+local textprint = "--- ADOPT ME AUTO-FARM V1.2 (Misc, Anti-AFK & Fixes)" 
 local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
