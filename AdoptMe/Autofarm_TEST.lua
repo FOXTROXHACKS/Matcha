@@ -23,7 +23,7 @@ local config = {
     CoinLogs = false 
 }
 
--- Función auxiliar para los Event Logs
+-- Eventlog stuff
 local function EventLog(msg, errr)
     if config.LOGS then
         if errr == 1 then
