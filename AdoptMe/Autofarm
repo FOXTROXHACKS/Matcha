@@ -5,304 +5,2668 @@
 [+] [ADDED] New manual TPs (Event, Minigame, Boat, Trash Bag).
 [+] [REMOVED] Stop tp when event is not active (tbh idk what to check now with the new boat system)
 ]]
+-- This script was generated using the MoonVeil Obfuscator v1.4.5 [https://moonveil.cc]
 
-local textprint = "--- ADOPT ME AUTO-FARM V1.2 (Shark Update)" 
-local config = {
-    Beam_AutoFarm = false,
-    Beam_Cooldown = 0.05,
-    
-    Token_AutoFarm = true,
-    Token_Cooldown = 0.05,
-    
-    Boat_AutoFarm = true,
-    Trash_AutoFarm = true,
-    
-    Anti_AFK = false,
-    Anti_AFK_Time = 60,
-    
-    LOGS = false,
-    CoinLogs = false 
-}
-
--- Eventlog stuff
-local function EventLog(msg, errr)
-    if config.LOGS then
-        if errr == 1 then
-            error("--- [ERR] " .. msg)
-        else
-            warn("--- [LOG] " .. msg)
-        end
-    end
-end
-
-UI.AddTab("AutoFarm", function(tab)
-    local sec = tab:Section("Configuration", "Left")
-    sec:Toggle("boat_toggle", "Boat Idle & Token Farm", config.Boat_AutoFarm, function(state)
-        config.Boat_AutoFarm = state
-    end)
-    sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
-        config.Token_AutoFarm = state
-    end)
-    sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 5, function(val)
-        config.Token_Cooldown = val / 100
-    end)
-    sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
-        config.Beam_AutoFarm = state
-    end)
-    sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
-        config.Beam_Cooldown = val / 100
-    end)
-    sec:Toggle("trash_toggle", "Trash Bags AutoFarm", config.Trash_AutoFarm, function(state)
-        config.Trash_AutoFarm = state
-    end)
-    
-    -- [ SECCIÓN MISC ]
-    local secMisc = tab:Section("MISC", "Right")
-    secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
-        config.LOGS = state
-    end)
-    secMisc:Toggle("coin_logs_toggle", "Detailed Coin Logs", config.CoinLogs, function(state) 
-        config.CoinLogs = state
-    end)
-    secMisc:Toggle("anti_afk_toggle", "Anti-AFK (Jump)", config.Anti_AFK, function(state)
-        config.Anti_AFK = state
-    end)
-    secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 60, function(val)
-        config.Anti_AFK_Time = val
-    end)
-
-    -- [ BOTONES DE ACCIÓN RÁPIDA ACTUALIZADOS ]
-    local secTP = tab:Section("Instant Actions & TPs", "Right")
-    
-    secTP:Button("TP to Event", function()
-        local character = game.Players.LocalPlayer.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.Position = Vector3.new(-353.7116, 32.7624, -1422.9288)
-            if notify then notify("[Manual TP]", "Teleported to Event!", 5) end
-        end
-    end)
-
-    secTP:Button("TP to Minigame", function()
-        local character = game.Players.LocalPlayer.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.Position = Vector3.new(-372.1794, 32.7624, -1424.9301)
-            if notify then notify("[Manual TP]", "Teleported to Minigame!", 5) end
-        end
-    end)
-
-    secTP:Button("TP to Boat", function()
-        local character = game.Players.LocalPlayer.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local boatTop = GetBoatTopInstance()
-            if boatTop and boatTop:IsA("BasePart") then
-                hrp.Velocity = Vector3.new(0, 0, 0)
-                hrp.Position = boatTop.Position
-                if notify then notify("[Manual TP]", "Teleported to Boat Top!", 5) end
-            else
-                if notify then notify("[Manual TP]", "Boat Top not found!", 5) end
-            end
-        end
-    end)
-    
-    secTP:Button("TP to Trash Bag", function()
-        local character = game.Players.LocalPlayer.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local trashFolder = workspace:FindFirstChild("Trash")
-            local trashBag = trashFolder and trashFolder:FindFirstChild("TrashBag")
-            if trashBag and trashBag:IsA("BasePart") then
-                hrp.Velocity = Vector3.new(0, 0, 0)
-                hrp.Position = trashBag.Position + Vector3.new(0, 1.5, 0)
-                if notify then notify("[Manual TP]", "Teleported to Trash Bag!", 5) end
-            else
-                if notify then notify("[Manual TP]", "No Trash Bags found in workspace.", 5) end
-            end
-        end
-    end)
-end)
-
-local ScanCooldown = 0.2 
-local player = game.Players.LocalPlayer
-
-function GetBoatTopInstance()
-    local interiors = workspace:FindFirstChild("Interiors")
-    local mainMap = interiors and interiors:FindFirstChild("MainMap!Default")
-    local eventFolder = mainMap and mainMap:FindFirstChild("Event")
-    local journeyPass = eventFolder and eventFolder:FindFirstChild("JourneyPass")
-    local boat = journeyPass and journeyPass:FindFirstChild("Boat")
-    if boat then
-        local top = boat:FindFirstChild("Top")
-        if top and top:IsA("BasePart") then
-            return top
-        end
-    end
-    return nil
-end
-
-print(textprint)
-
--- [ ANTI-AFK LOOP ]
-task.spawn(function()
-    local elapsed = 0
-    while true do
-        task.wait(1)
-        if config.Anti_AFK then
-            elapsed = elapsed + 1
-            if elapsed >= config.Anti_AFK_Time then
-                if keypress and keyrelease then
-                    keypress(0x20)
-                    task.wait(0.1)
-                    keyrelease(0x20)
-                    EventLog("- AntiAFK: Jumped")
-                end
-                elapsed = 0
-            end
-        else
-            elapsed = 0
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Trash_AutoFarm and not config.Boat_AutoFarm then 
-            task.wait(0.5) 
-            continue 
-        end
-        local character = player.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            
--------------- [1] TRASH BAG SEQUENCE (REPLACES BUCKETS)
-            local trashFolder = workspace:FindFirstChild("Trash")
-            if config.Trash_AutoFarm and trashFolder then
-                local bags = {}
-                for _, child in ipairs(trashFolder:GetChildren()) do
-                    if child.Name == "TrashBag" and child:IsA("BasePart") then
-                        table.insert(bags, child)
-                    end
-                end
-
-                if #bags > 0 then
-                    if config.CoinLogs then
-                        EventLog("Trash Bags detected! Starting cleanup sequence.")
-                    end
-                    
-                    for _, bag in ipairs(bags) do
-                        if not config.Trash_AutoFarm then break end
-                        if bag and bag.Parent then
-                            local success, bagPos = pcall(function() return bag.Position end)
-                            if success and typeof(bagPos) == "Vector3" then
-
-                                hrp.Velocity = Vector3.new(0, 0, 0)
-                                hrp.Position = bagPos + Vector3.new(0, 1.5, 0)
-                                task.wait(0.2)
-                                
-                                if keypress and keyrelease then
-                                    keypress(0x45)
-                                    task.wait(0.05)
-                                    keyrelease(0x45)
-                                end
-                                task.wait(0.2)
-                            end
-                        end
-                    end
-                    continue
-                end
-            end
-            
--------------- [2] BOAT IDLE & TOKEN LOGIC (REPLACES TRUCK)
-            local boatTop = GetBoatTopInstance()
-
-            if config.Boat_AutoFarm and boatTop then
-                local tokens = {}
-                local children = workspace:GetChildren()
-
-                for i = 1, #children do
-                    local child = children[i]
-                    if child.Name == "TokenPickup" then
-                        local col = child:FindFirstChild("Collider") or child
-                        if col:IsA("BasePart") then table.insert(tokens, col) end
-                    end
-                end
-                
-                if #tokens > 0 then
-                    for _, token in ipairs(tokens) do
-                        if config.Trash_AutoFarm and workspace:FindFirstChild("Trash") and workspace.Trash:FindFirstChild("TrashBag") then break end
-                        
-                        if not token or not token.Parent or not token:IsA("BasePart") then
-                            continue
-                        end
-                        local successPos, targetPos = pcall(function() return token.Position end)
-                        if successPos and typeof(targetPos) == "Vector3" and hrp then
-                            hrp.Velocity = Vector3.new(0, -10, 0) 
-                            hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                            
-                            task.wait(config.Token_Cooldown)
-                        end
+local Nc,H,qb,oa,xa,cb=type,getmetatable,pairs,bit32.bxor
+local Q,Fa,Pb,yb,P,d_,b_,Ea,na,i_,Ra,gb,gc,ab,U,Ma,Fc,Yc,l_,pb,J,ba,K,db,Ab,_c,lb,Sb,o_,Lc,va,nb,Sc,qc,Rc,aa,Ac,Ka,Qb,ad;
+gc=(getfenv());
+d_,ba,Sc=(string.char),(string.byte),(bit32 .bxor);
+i_=function(ac,rc)
+    local ma,O,Zb,eb,ua,Cb,wa,Bb;
+    Zb,wa=function(Rb,B,D)
+        wa[Rb]=oa(D,22717)-oa(B,37556)
+        return wa[Rb]
+    end,{};
+    Bb=wa[18883]or Zb(18883,47463,64925)
+    repeat
+        if Bb<32743 then
+            if Bb<=20172 then
+                if Bb<=349 then
+                    Cb=Cb+eb;
+                    ma=Cb
+                    if Cb~=Cb then
+                        Bb=64299
+                    else
+                        Bb=43510
                     end
                 else
-                    local successBoat, bPos = pcall(function() return boatTop.Position end)
-                    if successBoat and typeof(bPos) == "Vector3" and boatTop.Parent and hrp then
-                        hrp.Velocity = Vector3.new(0, 0, 0)
-                        hrp.Position = bPos + Vector3.new(0, -0.5, 0) -- Un poco más alto para asegurar no caerse
+                    ma=Cb
+                    if O~=O then
+                        Bb=64299
+                    else
+                        Bb=43510
                     end
                 end
-                
-                task.wait(0.05)
-                continue
+            else
+                ua='';
+                O,Cb,eb,Bb=(#ac-1)+196,196,1,20172
             end
--------------- [3] GENERAL LIGHT BEAM & TOKEN FARM (SI EL BOTE ESTÁ APAGADO O NO EXISTE)
-            local currentTargets = {}
-            local allChildren = workspace:GetChildren()
-            
-            for i = 1, #allChildren do
-                local child = allChildren[i]
-                if config.Beam_AutoFarm and child.Name == "SmallLightBeam" then
-                    if child:IsA("BasePart") then
-                        table.insert(currentTargets, {Part = child, Type = "Beam"})
-                    elseif child:IsA("Model") then
-                        local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
-                        if primary then table.insert(currentTargets, {Part = primary, Type = "Beam"}) end
-                    end
-                elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
-                    local colliderPart = child:FindFirstChild("Collider")
-                    if colliderPart and colliderPart:IsA("BasePart") then
-                        table.insert(currentTargets, {Part = colliderPart, Type = "Token"})
-                    elseif child:IsA("BasePart") then
-                        table.insert(currentTargets, {Part = child, Type = "Token"})
-                    end
+        elseif Bb<43510 then
+            ua,Bb=ua..d_(Sc(ba(ac,(ma-196)+1),ba(rc,(ma-196)%#rc+1))),wa[-12127]or Zb(-12127,37817,23255)
+        elseif Bb<=43510 then
+            if(eb>=0 and Cb>O)or((eb<0 or eb~=eb)and Cb<O)then
+                Bb=64299
+            else
+                Bb=wa[24016]or Zb(24016,39674,53384)
+            end
+        else
+            return ua
+        end
+    until Bb==47701
+end;
+aa=(select);
+na=(function(...)
+    return{[1]={...},[2]=aa('#',...)}
+end);
+J=((function()
+    local function a_(Xa,Oc,hb)
+        if Oc>hb then
+            return
+        end
+        return Xa[Oc],a_(Xa,Oc+1,hb)
+    end
+    return a_
+end)());
+yb,ad=(string.gsub),(string.char);
+Q=(function(Jb)
+    Jb=yb(Jb,'[^ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=]','')
+    return(Jb:gsub('.',function(ub)
+        if(ub=='=')then
+            return''
+        end
+        local Ba,Jc='',(('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'):find(ub)-1)
+        for Ua=6,1,-1 do
+            Ba=Ba..(Jc%2^Ua-Jc%2^(Ua-1)>0 and'1'or'0')
+        end
+        return Ba
+    end):gsub('%d%d%d?%d?%d?%d?%d?%d?',function(Db)
+        if(#Db~=8)then
+            return''
+        end
+        local j=0
+        for Hc=1,8 do
+            j=j+(Db:sub(Hc,Hc)=='1'and 2^(8-Hc)or 0)
+        end
+        return ad(j)
+    end))
+end);
+db,ab,Fa,b_,o_,l_,qc,lb=gc[i_("\200T2\210N\'",'\187 @')].unpack,gc[i_('mM\206wW\219','\30\57\188')].sub,gc[i_('\28x\242\6b\231','o\f\128')].byte,gc[i_('\2\219\20\129R','\96\178')].lshift,gc[i_('!\192\55\154q','C\169')].rshift,gc[i_(')\186?\224y','K\211')].band,gc[i_('\139\133\157\136\154','\255\228')].concat,{};
+Pb=(function(I)
+    local ka=lb[I]
+    if not(ka)then
+    else
+        return ka
+    end
+    local Ib,bb,E,qa,Mb=b_(1,11),b_(1,5),1,{},''
+    while E<=#I do
+        local sa=Fa(I,E);
+        E=E+1
+        for Pa=117,(8)+116 do
+            local ha=nil
+            if l_(sa,1)~=0 then
+                if E<=#I then
+                    ha=ab(I,E,E);
+                    E=E+1
+                end
+            else
+                if E+1<=#I then
+                    local pa=db(i_('\174\217\162','\144'),I,E);
+                    E=E+2
+                    local L,ib=#Mb-o_(pa,5),l_(pa,(bb-1))+3;
+                    ha=ab(Mb,L,L+ib-1)
                 end
             end
-            
-            if #currentTargets > 0 then
-                for _, item in ipairs(currentTargets) do
-                    if config.Trash_AutoFarm and workspace:FindFirstChild("Trash") and workspace.Trash:FindFirstChild("TrashBag") then break end
-                    
-                    local target = item.Part
-                    local itemType = item.Type
-
-                    if target and target.Parent and hrp and target:IsA("BasePart") then
-                        local successPos, targetPos = pcall(function() return target.Position end)
-                        if successPos and typeof(targetPos) == "Vector3" then
-                            hrp.Velocity = Vector3.new(0, 0, 0)
-                            hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                                                                                                
-                            if itemType == "Token" and config.Token_AutoFarm then
-                                task.wait(config.Token_Cooldown)
-                            elseif itemType == "Beam" and config.Beam_AutoFarm then
-                                task.wait(config.Beam_Cooldown)
+            sa=o_(sa,1)
+            if ha then
+                qa[#qa+1]=ha;
+                Mb=ab(Mb..ha,-Ib)
+            end
+        end
+    end
+    local sc=qc(qa);
+    lb[I]=sc
+    return sc
+end)
+local Fb,e_,Dc,mb,Xb,Hb,cd,Mc,G,q,T,ta,Za,Kb,ia,ob,da,Ob,ca,Ja,t_,v,Ga,_d,vc,Tb,Oa,u_,xc,z=gc[i_('9H=T','M1')],gc[i_('\146\27\131\20\142','\226x')],gc[i_('\135\55\144*\144','\226E')],gc[i_('\178\148\217\191\171\153\210\184','\198\251\183\202')],gc[i_('\241n2\245o5','\144\29A')],gc[i_('\247\203\1\225\205\25','\132\174m')],gc[i_('\252\190\149\131U\t\238\175\128\140\\\24','\143\219\225\238\48}')],gc[i_('96\174#,\187','JB\220')].format,gc[i_(':\212\172 \206\185','I\160\222')].unpack,gc[i_('\171\171\191\177\177\170','\216\223\205')].sub,gc[i_('\f\189.\22\167;','\127\201\\')].byte,gc[i_('\212\145\230\206\139\243','\167\229\148')].char,gc[i_('\217\222\207\211\200','\173\191')].move,gc[i_('\166t\176y\183','\210\21')].pack,gc[i_('xWnZi','\f\54')].create,gc[i_('\151\129\129\140\134','\227\224')].insert,gc[i_('\188\251\170\246\173','\200\154')].concat,gc[i_('\246\136\178\148\224\147\169\149\240','\149\231\192\251')].create,gc[i_('\"y\240\4\52b\235\5$','A\22\130k')].yield,gc[i_('\188\54\254U\170-\229T\186','\223Y\140:')].resume,gc[i_('\222\143*s\200\148\49r\216','\189\224X\28')].close,gc[i_('\254\212\160\255\212\186\239','\153\177\212')],gc[i_('\223o\201\53\143','\189\6')].bor,gc[i_('\151\v\129Q\199','\245b')].bxor,gc[i_('\215\54\193l\135','\181_')].band,gc[i_('\240\199\230\157\160','\146\174')].btest,gc[i_('\223\226\201\184\143','\189\139')].rshift,gc[i_('\\(Jr\f','>A')].lshift,gc[i_('T6Bl\4','6_')].extract,{[14907]={{4,4,true},{10,4,false},{5,4,true},{10,4,false},{5,10,true},{10,5,true},{8,5,true},{10,1,false},{4,5,true},{5,4,false},{4,7,true},{10,9,true},{10,4,false},{5,4,false},{10,6,false},{10,4,false},{10,8,true},{10,4,false},{10,4,false},{4,4,true},{5,8,false},{5,4,true},{4,3,true},{9,1,false},{5,9,false},{5,4,true},{8,10,true},{10,9,false},{10,3,true},{7,8,false},{10,4,false},{10,8,true},{8,10,false},{10,3,true},{5,4,true},{5,0,true},{4,4,true},{5,10,true},{10,4,true},{10,4,false},{10,7,false},{5,0,true},{7,10,false},{7,4,true},{7,7,false},{5,8,true},{10,8,true},{8,10,true},{5,9,false},{8,10,true},{7,10,false},{8,0,true},{10,8,false},{5,1,true},{5,4,false},{5,8,false},{10,3,true},{4,9,false},{5,4,false},{7,4,false},{5,4,false},{5,9,true},{5,4,false},{4,3,false},{7,1,true},{10,4,false},{8,9,false},{9,7,false},{5,3,true},{9,4,true},{7,7,true},{5,8,true},{5,4,true},{7,4,true},{8,3,true},{4,4,false},{5,0,false},{5,9,false},{10,4,false},{10,0,false},{10,4,false},{10,8,false},{7,4,false},{9,1,true},{7,7,false},{10,7,false},{10,8,false},{9,8,true},{8,7,false},{5,4,false},{5,4,true},{9,8,true},{7,4,false},{10,3,true},{4,3,true},{10,6,false},{7,9,true},{8,1,true},{5,7,true},{10,4,true},{4,3,true},{7,8,true},{4,4,false},{4,8,false},{4,0,false},{9,5,false},{5,10,true},{4,5,true},{10,3,true},{5,0,false},{10,4,false},{5,4,true},{10,4,true},{4,2,false},{5,5,true},{10,4,false},{8,1,true},{10,9,true},{8,5,true},{5,4,false},{8,10,true},{7,4,true},{7,1,false},{4,4,true},{9,8,false},{9,5,false},{10,3,true},{5,8,false},{7,7,true},{5,1,true},{10,4,false},{4,4,true},{8,10,true},{5,3,false},{9,4,true},{5,1,false},{10,3,true},{8,7,false},{5,9,true},{5,10,true},{5,4,false},{10,4,false},{7,3,false},{9,10,true},{10,6,false},{7,7,true},{10,1,false},{9,9,false},{4,4,false},{4,7,true},{4,9,true},{7,9,true},{10,4,false},{7,4,false},{10,4,false},{10,7,true},{10,6,false},{9,0,false},{5,7,true},{9,1,false},{4,4,false},{5,4,true},{9,9,false},{8,9,false},{7,7,false},{8,0,true},{9,1,false},{8,10,false},{10,9,true},{7,4,false},{5,7,false},{9,7,true},{8,1,false},{9,1,false},{10,4,false},{5,10,true},{4,3,false},{10,4,false},{5,4,false},{9,1,false},{8,8,false},{8,7,false},{7,9,false},{10,4,false},{10,1,false},{5,5,true},{7,10,false},{10,5,true},{7,8,true},{10,4,false},{5,4,false},{4,4,false},{5,8,false},{5,4,true},{7,4,true},{8,8,true},{5,9,false},{4,7,true},{10,3,true},{8,1,true},{9,7,false},{5,8,false},{7,0,true},{4,0,false},{8,10,true},{7,4,false},{9,3,true},{9,5,false},{4,8,false},{10,8,false},{7,7,false},{10,4,false},{5,4,true},{8,9,false},{5,0,true},{10,4,false},{9,5,false},{9,0,false},{7,5,false},{9,8,true},{9,4,false},{9,7,true},{4,10,true},{7,4,true},{10,3,true},{5,4,true},{8,5,true},{9,5,true},{10,4,false},{10,4,false},{8,9,true},{10,4,false},{10,3,false},{10,6,false},{8,9,true},{10,4,false},{10,4,false},{5,9,true},{7,9,true},{10,4,true},{5,7,false},{9,3,false},{10,4,false},{4,9,false},{9,5,false},{4,4,true},{9,9,false},{10,4,false},{9,10,true},{9,3,false},{8,0,true},{7,10,false},{10,8,false},{10,4,false},{7,4,true},{4,4,false}},[47242]={},[60866]={}}
+local Y=(function(lc)
+    local k=z[60866][lc]
+    if k then
+        return k
+    end
+    local cc=1
+    local function fa_()
+        local jc,mc,Tc,nc,dc,y,Kc,x,bd,h,W,V,F,bc,vb,zc,Yb,p,Vc,xb,ya,S,Zc,w_,X,kb,Na,Ec,Pc,sb,Aa,Xc;
+        Aa,dc=function(pc,Vb,ea)
+            dc[pc]=oa(Vb,23936)-oa(ea,20670)
+            return dc[pc]
+        end,{};
+        x=dc[141]or Aa(141,51059,4925)
+        while x~=31856 do
+            if x>30777 then
+                if x<=46884 then
+                    if x<38773 then
+                        if x>=34696 then
+                            if x<=36400 then
+                                if x>35398 then
+                                    if x<=36364 then
+                                        x,Xc=dc[-7164]or Aa(-7164,96411,42547),nil
+                                    else
+                                        y=X
+                                        if y==0 then
+                                            x=dc[3523]or Aa(3523,44765,20267)
+                                            continue
+                                        else
+                                            x=dc[-22005]or Aa(-22005,91357,45329)
+                                            continue
+                                        end
+                                        x=dc[-28790]or Aa(-28790,36651,52655)
+                                    end
+                                elseif x>=34757 then
+                                    if x<=34757 then
+                                        V=nc;
+                                        sb=Ga(sb,u_(vc(V,127),(w_-115)*7))
+                                        if(not Tb(V,128))then
+                                            x=dc[-30687]or Aa(-30687,38016,243)
+                                            continue
+                                        else
+                                            x=dc[13786]or Aa(13786,78348,47290)
+                                            continue
+                                        end
+                                        x=dc[18194]or Aa(18194,121615,44985)
+                                    else
+                                        x,zc=58294,_d(Na,87)
+                                        continue
+                                    end
+                                else
+                                    F=F+mc;
+                                    w_=F
+                                    if F~=F then
+                                        x=dc[-30322]or Aa(-30322,60828,10951)
+                                    else
+                                        x=17710
+                                    end
+                                end
+                            elseif x<=37752 then
+                                if x>36650 then
+                                    F,x=_d(Tc,-543239057),52345
+                                    continue
+                                elseif x>36437 then
+                                    if(w_==6)then
+                                        x=dc[-29450]or Aa(-29450,76748,38094)
+                                        continue
+                                    else
+                                        x=dc[-5995]or Aa(-5995,66194,53048)
+                                        continue
+                                    end
+                                    x=dc[14210]or Aa(14210,84118,38491)
+                                else
+                                    nc,x=nil,dc[-23730]or Aa(-23730,87562,31105)
+                                end
+                            else
+                                if(w_>=0 and Tc>mc)or((w_<0 or w_~=w_)and Tc<mc)then
+                                    x=60513
+                                else
+                                    x=43805
+                                end
+                            end
+                        elseif x>32748 then
+                            if x>=34196 then
+                                if x>34196 then
+                                    kb,x=_d(bd,87),22271
+                                    continue
+                                else
+                                    nc=mc[64996];
+                                    V,X=Oa(nc,30),vc(Oa(nc,20),1023);
+                                    mc[11916]=ya[X+1];
+                                    mc[31038]=V
+                                    if V==2 then
+                                        x=dc[-27931]or Aa(-27931,128794,44948)
+                                        continue
+                                    elseif(V==3)then
+                                        x=dc[-6802]or Aa(-6802,86864,50783)
+                                        continue
+                                    else
+                                        x=dc[19869]or Aa(19869,68702,45693)
+                                        continue
+                                    end
+                                    x=dc[11583]or Aa(11583,86652,61535)
+                                end
+                            else
+                                h=G(i_('\202','\136'),lc,cc);
+                                cc,x=cc+1,dc[20753]or Aa(20753,62061,15994)
+                            end
+                        elseif x>32285 then
+                            if x>32479 then
+                                nc,x=nil,dc[-23064]or Aa(-23064,16183,17464)
+                            else
+                                S=0;
+                                xb,Yb,x,Pc=65,69,40414,1
+                            end
+                        elseif x<=31265 then
+                            if x<=30899 then
+                                x=dc[3767]or Aa(3767,49435,13894)
+                                continue
+                            else
+                                x,Yb=dc[-912]or Aa(-912,72898,37787),sb
+                            end
+                        else
+                            Pc=Pc+ya;
+                            h=Pc
+                            if Pc~=Pc then
+                                x=dc[4169]or Aa(4169,73020,34585)
+                            else
+                                x=dc[14366]or Aa(14366,35522,33831)
                             end
                         end
+                    elseif x>=44175 then
+                        if x<45532 then
+                            if x>=44898 then
+                                if x<=44898 then
+                                    Ec=Pc;
+                                    ya=ia(Ec);
+                                    h,sb,F,x=168,(Ec)+167,1,45402
+                                else
+                                    Tc=h
+                                    if sb~=sb then
+                                        x=25297
+                                    else
+                                        x=8801
+                                    end
+                                end
+                            elseif x<=44175 then
+                                if w_==1 then
+                                    x=dc[23502]or Aa(23502,76917,64222)
+                                    continue
+                                end
+                                x=dc[-22341]or Aa(-22341,57832,16009)
+                            else
+                                W=G(i_('p','\19')..y,lc,cc);
+                                x,cc=dc[-16037]or Aa(-16037,39655,2856),cc+y
+                            end
+                        elseif x<=46260 then
+                            if x>=45745 then
+                                if x<=45745 then
+                                    x=dc[3505]or Aa(3505,25267,17972)
+                                    continue
+                                else
+                                    x,sb=dc[1850]or Aa(1850,56648,13566),nil
+                                end
+                            else
+                                x,V=dc[-17705]or Aa(-17705,38973,49309),na(nil)
+                            end
+                        elseif x<=46782 then
+                            h=Pc
+                            if Ec~=Ec then
+                                x=dc[-18253]or Aa(-18253,83324,65369)
+                            else
+                                x=681
+                            end
+                        else
+                            Zc=y
+                            if jc~=jc then
+                                x=dc[-5826]or Aa(-5826,95089,184)
+                            else
+                                x=54599
+                            end
+                        end
+                    elseif x>=42428 then
+                        if x>=43805 then
+                            if x<43888 then
+                                F[(nc-159)],x=fa_(),dc[-19950]or Aa(-19950,93339,59484)
+                            elseif x>43888 then
+                                mc=G(i_('\169','\235'),lc,cc);
+                                x,cc=dc[-15818]or Aa(-15818,15069,3544),cc+1
+                            else
+                                y=vc(Oa(nc,10),1023);
+                                x,mc[57159]=dc[27931]or Aa(27931,39859,1958),ya[y+1]
+                            end
+                        elseif x>42428 then
+                            nc=Tc
+                            if mc~=mc then
+                                x=dc[8294]or Aa(8294,73137,878)
+                            else
+                                x=dc[-27292]or Aa(-27292,96048,50165)
+                            end
+                        else
+                            mc=xb[(Tc-211)];
+                            w_=mc[41758]
+                            if(w_==10)then
+                                x=dc[-2619]or Aa(-2619,122161,58691)
+                                continue
+                            else
+                                x=dc[10393]or Aa(10393,59776,7348)
+                                continue
+                            end
+                            x=dc[-14232]or Aa(-14232,70650,36833)
+                        end
+                    elseif x>40414 then
+                        h=ya;
+                        S=Ga(S,u_(vc(h,127),(Ec-65)*7))
+                        if(not Tb(h,128))then
+                            x=dc[5405]or Aa(5405,53098,53336)
+                            continue
+                        else
+                            x=dc[-32650]or Aa(-32650,50792,2300)
+                            continue
+                        end
+                        x=dc[-25725]or Aa(-25725,41011,60083)
+                    elseif x<=38948 then
+                        if x>38773 then
+                            mc=Tc;
+                            Ec=Ga(Ec,u_(vc(mc,127),(F-141)*7))
+                            if(not Tb(mc,128))then
+                                x=dc[-10331]or Aa(-10331,128098,42895)
+                                continue
+                            else
+                                x=dc[5821]or Aa(5821,104102,40681)
+                                continue
+                            end
+                            x=dc[-10120]or Aa(-10120,92121,27956)
+                        else
+                            Na=G(i_('\172','\238'),lc,cc);
+                            cc,x=cc+1,dc[-17071]or Aa(-17071,52500,22256)
+                        end
+                    else
+                        Ec=xb
+                        if Yb~=Yb then
+                            x=dc[-11078]or Aa(-11078,81070,12573)
+                        else
+                            x=dc[433]or Aa(433,72209,34037)
+                        end
                     end
+                elseif x>=57067 then
+                    if x>=60513 then
+                        if x<=63940 then
+                            if x>63029 then
+                                if x<=63728 then
+                                    if(w_==9)then
+                                        x=dc[25937]or Aa(25937,55257,27259)
+                                        continue
+                                    else
+                                        x=dc[6599]or Aa(6599,51969,8421)
+                                        continue
+                                    end
+                                    x=dc[-6288]or Aa(-6288,32792,16067)
+                                else
+                                    x,jc=22040,nil
+                                end
+                            elseif x<60673 then
+                                return{[13110]='',[55109]=F,[28871]=Kc,[21358]=xb,[27225]=Na,[61519]=Vc}
+                            elseif x<=60673 then
+                                x,kb=dc[9108]or Aa(9108,96561,35898),nil
+                            else
+                                x,V=dc[-17681]or Aa(-17681,122071,55250),nil
+                            end
+                        elseif x>=64896 then
+                            if x>64896 then
+                                x,p=50148,_d(S,1306619156)
+                                continue
+                            else
+                                if(Zc>=0 and jc>W)or((Zc<0 or Zc~=Zc)and jc<W)then
+                                    x=dc[-26963]or Aa(-26963,33180,14389)
+                                else
+                                    x=dc[-18423]or Aa(-18423,87209,19606)
+                                end
+                            end
+                        elseif x<=63979 then
+                            X=G(i_('i1','U'),lc,cc);
+                            cc,x=cc+8,dc[10843]or Aa(10843,96185,59676)
+                        else
+                            ya=ya+sb;
+                            F=ya
+                            if ya~=ya then
+                                x=dc[23456]or Aa(23456,36705,64134)
+                            else
+                                x=57707
+                            end
+                        end
+                    elseif x>57931 then
+                        if x<=58390 then
+                            if x>58294 then
+                                x,Tc=43914,nil
+                            else
+                                x,Na,bc=dc[20324]or Aa(20324,24948,21313),zc,nil
+                            end
+                        else
+                            Vc=G(i_('*','h'),lc,cc);
+                            cc,x=cc+1,dc[4477]or Aa(4477,90008,44779)
+                        end
+                    elseif x<57707 then
+                        if x>57067 then
+                            mc,x=_d(w_,87),48653
+                            continue
+                        else
+                            x,V=53526,na(_d(X,1306619156))
+                            continue
+                        end
+                    elseif x<57708 then
+                        if(sb>=0 and ya>h)or((sb<0 or sb~=sb)and ya<h)then
+                            x=dc[18988]or Aa(18988,39260,52365)
+                        else
+                            x=58390
+                        end
+                    elseif x<=57708 then
+                        Tc=h
+                        if sb~=sb then
+                            x=dc[-28549]or Aa(-28549,42444,63505)
+                        else
+                            x=52313
+                        end
+                    else
+                        V=G(i_('V','\20'),lc,cc);
+                        cc,x=cc+1,29712
+                    end
+                elseif x<=51892 then
+                    if x<=49036 then
+                        if x<=47759 then
+                            if x<47196 then
+                                X=0;
+                                x,W,y,jc=46884,1,208,212
+                            elseif x>47196 then
+                                x,jc=23813,_d(W,-543239057)
+                                continue
+                            else
+                                Ec=0;
+                                x,sb,ya,h=dc[-17473]or Aa(-17473,14840,398),1,141,145
+                            end
+                        elseif x>48653 then
+                            if(w_==2)then
+                                x=dc[-28077]or Aa(-28077,45415,48271)
+                                continue
+                            else
+                                x=dc[20277]or Aa(20277,87087,50445)
+                                continue
+                            end
+                            x=dc[12028]or Aa(12028,9264,31681)
+                        else
+                            w_=mc
+                            if(w_==5)then
+                                x=dc[-32710]or Aa(-32710,55909,22343)
+                                continue
+                            else
+                                x=dc[23995]or Aa(23995,91778,64358)
+                                continue
+                            end
+                            x=20017
+                        end
+                    elseif x>51377 then
+                        mc[11916]=ya[xc(mc[64996],0,24)+1];
+                        x,mc[28364]=dc[85]or Aa(85,81307,41406),xc(mc[64996],31,1)==1
+                    elseif x<=51093 then
+                        if x<=50148 then
+                            S=p;
+                            xb,Yb=ia(S),false;
+                            ya,Pc,Ec,x=1,7,(S)+6,dc[16586]or Aa(16586,79073,57885)
+                        else
+                            x,V=dc[-10136]or Aa(-10136,41901,5665),na(nil)
+                        end
+                    else
+                        Tc=G(i_('\219\174\211','\231'),lc,cc);
+                        x,cc=dc[21362]or Aa(21362,71508,59362),cc+4
+                    end
+                elseif x<53527 then
+                    if x>=53134 then
+                        if x>53134 then
+                            nc,x=J(V[1],1,V[2]),dc[-2091]or Aa(-2091,94956,45445)
+                        else
+                            kb=Xc;
+                            X=Ga(X,u_(vc(kb,127),(Zc-208)*7))
+                            if(not Tb(kb,128))then
+                                x=dc[7516]or Aa(7516,30917,16884)
+                                continue
+                            else
+                                x=dc[7431]or Aa(7431,1949,19523)
+                                continue
+                            end
+                            x=dc[6765]or Aa(6765,49878,12936)
+                        end
+                    elseif x>52313 then
+                        Tc=F;
+                        mc=vc(Tc,255);
+                        w_=z[14907][mc+1];
+                        nc,V,X=w_[1],w_[2],w_[3];
+                        y={[41758]=V,[35235]=0,[21778]=0,[57159]=0,[2041]=mc,[64467]=0,[64996]=0,[57579]=0,[11916]=0,[53083]=nil,[37084]=0,[36133]=0,[28364]=0,[52113]=0,[31038]=0};
+                        ob(xb,y)
+                        if(nc==5)then
+                            x=dc[28154]or Aa(28154,45397,56341)
+                            continue
+                        else
+                            x=dc[-20716]or Aa(-20716,63092,959)
+                            continue
+                        end
+                        x=14775
+                    else
+                        if(F>=0 and h>sb)or((F<0 or F~=F)and h<sb)then
+                            x=20381
+                        else
+                            x=42428
+                        end
+                    end
+                elseif x<54599 then
+                    if x<=53527 then
+                        x,bc=dc[23685]or Aa(23685,51173,5591),_d(Kc,87)
+                        continue
+                    else
+                        V,x=na'',dc[-31719]or Aa(-31719,36689,65120)
+                        continue
+                    end
+                elseif x>54599 then
+                    mc[11916],x=ya[mc[57579]+1],dc[-9741]or Aa(-9741,83075,63830)
+                else
+                    if(W>=0 and y>jc)or((W<0 or W~=W)and y<jc)then
+                        x=dc[-20018]or Aa(-20018,104130,48361)
+                    else
+                        x=36364
+                    end
+                end
+            elseif x<=20314 then
+                if x<13722 then
+                    if x<6146 then
+                        if x>=2551 then
+                            if x>4612 then
+                                if x<=4936 then
+                                    F=ya
+                                    if h~=h then
+                                        x=dc[-19732]or Aa(-19732,50843,8908)
+                                    else
+                                        x=dc[20086]or Aa(20086,102369,41032)
+                                    end
+                                else
+                                    x=dc[17330]or Aa(17330,78642,57209)
+                                    continue
+                                end
+                            elseif x>=4135 then
+                                if x<=4135 then
+                                    y[57579]=vc(Oa(Tc,8),255);
+                                    y[52113]=vc(Oa(Tc,16),255);
+                                    x,y[35235]=dc[-12504]or Aa(-12504,88973,40168),vc(Oa(Tc,24),255)
+                                else
+                                    x=dc[-12157]or Aa(-12157,107416,44595)
+                                    continue
+                                end
+                            else
+                                Tc,x=_d(mc,87),38948
+                                continue
+                            end
+                        elseif x<=963 then
+                            if x<681 then
+                                nc,x={},dc[-14511]or Aa(-14511,42811,64564)
+                            elseif x<=681 then
+                                if(ya>=0 and Pc>Ec)or((ya<0 or ya~=ya)and Pc<Ec)then
+                                    x=26901
+                                else
+                                    x=dc[21118]or Aa(21118,37091,53514)
+                                end
+                            else
+                                x,vb=6146,_d(Vc,87)
+                                continue
+                            end
+                        else
+                            x,mc[11916]=dc[7217]or Aa(7217,37061,3732),ya[mc[64996]+1]
+                        end
+                    elseif x<9203 then
+                        if x<7732 then
+                            if x>6146 then
+                                F,x=nil,51377
+                            else
+                                x,Vc,p=32479,vb,nil
+                            end
+                        elseif x<=7732 then
+                            Yb,x=false,dc[-15460]or Aa(-15460,59778,25947)
+                        else
+                            if(F>=0 and h>sb)or((F<0 or F~=F)and h<sb)then
+                                x=dc[32722]or Aa(32722,50952,26377)
+                            else
+                                x=dc[14377]or Aa(14377,14741,20580)
+                            end
+                        end
+                    elseif x<10190 then
+                        if x>9203 then
+                            if(w_==5)then
+                                x=dc[31584]or Aa(31584,40124,319)
+                                continue
+                            else
+                                x=dc[6306]or Aa(6306,33477,50406)
+                                continue
+                            end
+                            x=dc[3788]or Aa(3788,64863,24954)
+                        else
+                            x,nc=dc[27435]or Aa(27435,61561,3958),J(V[1],1,V[2])
+                        end
+                    elseif x>=10409 then
+                        if x>10409 then
+                            kb=G(i_('\206','\140'),lc,cc);
+                            x,cc=15869,cc+1
+                        else
+                            x,Pc=44898,_d(Ec,1306619156)
+                            continue
+                        end
+                    else
+                        sb=h;
+                        F=ia(sb);
+                        w_,x,Tc,mc=1,dc[-397]or Aa(-397,118794,46413),160,(sb)+159
+                    end
+                elseif x>=17456 then
+                    if x<18477 then
+                        if x>17691 then
+                            if(mc>=0 and F>Tc)or((mc<0 or mc~=mc)and F<Tc)then
+                                x=dc[2929]or Aa(2929,84929,45088)
+                            else
+                                x=36437
+                            end
+                        elseif x>=17621 then
+                            if x>17621 then
+                                jc,W=vc(Oa(Tc,8),16777215),nil;
+                                W=if jc<8388608 then jc else jc-16777216;
+                                x,y[37084]=dc[-9381]or Aa(-9381,65071,14662),W
+                            else
+                                h=h+F;
+                                Tc=h
+                                if h~=h then
+                                    x=25297
+                                else
+                                    x=8801
+                                end
+                            end
+                        else
+                            sb=0;
+                            F,mc,Tc,x=115,1,119,29436
+                        end
+                    elseif x<19375 then
+                        if x>18477 then
+                            if w_==6 then
+                                x=dc[20944]or Aa(20944,105583,47664)
+                                continue
+                            elseif w_==3 then
+                                x=dc[-14393]or Aa(-14393,56132,53850)
+                                continue
+                            elseif w_==7 then
+                                x=dc[16486]or Aa(16486,46503,12845)
+                                continue
+                            end
+                            x=dc[-22810]or Aa(-22810,67355,47934)
+                        else
+                            bd=G(i_('\190','\252'),lc,cc);
+                            x,cc=34666,cc+1
+                        end
+                    elseif x>20017 then
+                        sb,x=X,dc[32336]or Aa(32336,49717,29994)
+                        continue
+                    elseif x<=19375 then
+                        if(Yb)then
+                            x=dc[-12621]or Aa(-12621,63931,54969)
+                            continue
+                        else
+                            x=dc[4063]or Aa(4063,128557,42567)
+                            continue
+                        end
+                        x=dc[-24347]or Aa(-24347,95089,57450)
+                    else
+                        ya[(Tc-167)],x=nc,dc[-13850]or Aa(-13850,88377,61274)
+                    end
+                elseif x<15648 then
+                    if x>=14581 then
+                        if x<=14581 then
+                            Kc=G(i_('\231','\165'),lc,cc);
+                            x,cc=dc[-12049]or Aa(-12049,115037,39800),cc+1
+                        else
+                            if X then
+                                x=dc[436]or Aa(436,87380,24494)
+                                continue
+                            end
+                            x=dc[16679]or Aa(16679,62093,3853)
+                        end
+                    elseif x>13722 then
+                        x,h=dc[-11004]or Aa(-11004,40169,51493),_d(sb,1306619156)
+                        continue
+                    else
+                        X,x=nil,28127
+                    end
+                elseif x<=15869 then
+                    if x>=15716 then
+                        if x>15716 then
+                            Xc,x=_d(kb,87),53134
+                            continue
+                        else
+                            mc[11916],x=ya[mc[37084]+1],dc[20988]or Aa(20988,81429,42180)
+                        end
+                    else
+                        y=y+W;
+                        Zc=y
+                        if y~=y then
+                            x=dc[32349]or Aa(32349,89429,29012)
+                        else
+                            x=54599
+                        end
+                    end
+                elseif x>16681 then
+                    xb=xb+Pc;
+                    Ec=xb
+                    if xb~=xb then
+                        x=dc[-17124]or Aa(-17124,76302,10429)
+                    else
+                        x=29510
+                    end
+                else
+                    x,ya=dc[-24807]or Aa(-24807,97428,12017),_d(h,87)
+                    continue
+                end
+            elseif x>26710 then
+                if x>29510 then
+                    if x<29712 then
+                        if x<29692 then
+                            x,X=36400,_d(y,1306619156)
+                            continue
+                        elseif x>29692 then
+                            jc=jc+Zc;
+                            Xc=jc
+                            if jc~=jc then
+                                x=dc[-13917]or Aa(-13917,86025,51526)
+                            else
+                                x=64896
+                            end
+                        else
+                            if(w_==4)then
+                                x=dc[-10699]or Aa(-10699,129792,57589)
+                                continue
+                            else
+                                x=dc[-7866]or Aa(-7866,73500,50867)
+                                continue
+                            end
+                            x=dc[15815]or Aa(15815,92759,47384)
+                        end
+                    elseif x>30703 then
+                        Tc=Tc+w_;
+                        nc=Tc
+                        if Tc~=Tc then
+                            x=60513
+                        else
+                            x=38757
+                        end
+                    elseif x<=30179 then
+                        if x>29712 then
+                            Xc=jc
+                            if W~=W then
+                                x=dc[31797]or Aa(31797,85550,61603)
+                            else
+                                x=dc[-20302]or Aa(-20302,79751,15417)
+                            end
+                        else
+                            x,nc=34757,_d(V,87)
+                            continue
+                        end
+                    else
+                        y,jc=vc(Oa(nc,10),1023),vc(Oa(nc,0),1023);
+                        mc[57159]=ya[y+1];
+                        mc[21778],x=ya[jc+1],dc[-7675]or Aa(-7675,62439,28658)
+                    end
+                elseif x>=28603 then
+                    if x<28823 then
+                        if x>28603 then
+                            x=dc[16945]or Aa(16945,80031,41264)
+                            continue
+                        else
+                            x,mc[11916]=dc[29403]or Aa(29403,49193,32304),xc(mc[64996],0,16)
+                        end
+                    elseif x>29436 then
+                        if(Pc>=0 and xb>Yb)or((Pc<0 or Pc~=Pc)and xb<Yb)then
+                            x=dc[3339]or Aa(3339,93455,25018)
+                        else
+                            x=dc[3830]or Aa(3830,66270,43562)
+                        end
+                    elseif x<=28823 then
+                        x,V=dc[20453]or Aa(20453,9526,16606),X
+                        continue
+                    else
+                        w_=F
+                        if Tc~=Tc then
+                            x=dc[30680]or Aa(30680,1516,29303)
+                        else
+                            x=17710
+                        end
+                    end
+                elseif x<28127 then
+                    if x<=26901 then
+                        Pc,x=nil,dc[-9472]or Aa(-9472,114824,46098)
+                    else
+                        jc,x=W,dc[12759]or Aa(12759,53022,25003)
+                        continue
+                    end
+                elseif x>28127 then
+                    h=h+F;
+                    Tc=h
+                    if h~=h then
+                        x=dc[-9200]or Aa(-9200,46442,51699)
+                    else
+                        x=dc[-22124]or Aa(-22124,125860,47477)
+                    end
+                else
+                    y=0;
+                    Zc,x,jc,W=1,dc[17904]or Aa(17904,53745,17968),139,143
+                end
+            elseif x<23813 then
+                if x<=22040 then
+                    if x<=21756 then
+                        if x>20381 then
+                            x,Kc,vb=60237,bc,nil
+                        elseif x<=20372 then
+                            x,mc[11916]=dc[581]or Aa(581,48746,9329),ya[mc[64467]+1]
+                        else
+                            x,h=17456,nil
+                        end
+                    elseif x>21810 then
+                        W=G(i_('$Q,','\24'),lc,cc);
+                        cc,x=cc+4,47759
+                    else
+                        w_=G(i_('\184','\250'),lc,cc);
+                        x,cc=57192,cc+1
+                    end
+                elseif x<22446 then
+                    if x<=22271 then
+                        bd=kb;
+                        y=Ga(y,u_(vc(bd,127),(Xc-139)*7))
+                        if(not Tb(bd,128))then
+                            x=dc[16059]or Aa(16059,70302,36462)
+                            continue
+                        else
+                            x=dc[21446]or Aa(21446,89142,56583)
+                            continue
+                        end
+                        x=dc[-30165]or Aa(-30165,52489,19506)
+                    else
+                        x,zc=dc[-22275]or Aa(-22275,119920,41669),nil
+                    end
+                elseif x>22446 then
+                    if nc==4 then
+                        x=dc[-15655]or Aa(-15655,13096,31027)
+                        continue
+                    elseif(nc==10)then
+                        x=dc[-3447]or Aa(-3447,86787,44770)
+                        continue
+                    else
+                        x=dc[-3367]or Aa(-3367,37878,50177)
+                        continue
+                    end
+                    x=dc[31222]or Aa(31222,36937,50348)
+                else
+                    jc,x=nil,dc[10148]or Aa(10148,93037,55949)
+                end
+            elseif x<=25403 then
+                if x>24969 then
+                    if x>25297 then
+                        mc,x=nil,dc[-9462]or Aa(-9462,44368,52000)
+                    else
+                        h,x,F,sb=212,dc[17620]or Aa(17620,67713,9003),1,(S)+211
+                    end
+                elseif x<=24618 then
+                    if x>23813 then
+                        y[57579]=vc(Oa(Tc,8),255);
+                        jc=vc(Oa(Tc,16),65535);
+                        y[36133]=jc;
+                        W=nil;
+                        W=if jc<32768 then jc else jc-65536;
+                        x,y[64467]=dc[-5106]or Aa(-5106,85849,35228),W
+                    else
+                        W=jc;
+                        y[64996]=W;
+                        ob(xb,{});
+                        x=dc[24553]or Aa(24553,53606,27954)
+                    end
+                else
+                    x,V=9203,na(jc)
+                    continue
+                end
+            elseif x>=26614 then
+                if x>26614 then
+                    x,nc=dc[20270]or Aa(20270,50998,7227),V
+                else
+                    if w_==8 then
+                        x=dc[21606]or Aa(21606,36097,14408)
+                        continue
+                    elseif(w_==2)then
+                        x=dc[-29741]or Aa(-29741,51903,2405)
+                        continue
+                    else
+                        x=dc[-19792]or Aa(-19792,74623,54961)
+                        continue
+                    end
+                    x=dc[24589]or Aa(24589,80975,41482)
+                end
+            elseif x>25802 then
+                mc[11916],x=ya[mc[52113]+1],dc[-14157]or Aa(-14157,97117,59260)
+            else
+                x,ya=33678,nil
+            end
+        end
+    end
+    local kc=fa_();
+    z[60866][lc]=kc
+    return kc
+end)
+local Gc=(function(Da,hc)
+    Da=Y(Da)
+    local N=v()
+    local function Ca(oc,ja)
+        local jb=(function(...)
+            return{...},Hb('#',...)
+        end)
+        local yc;
+        yc=(function(Ia,Va,Eb)
+            if Va>Eb then
+                return
+            end
+            return Ia[Va],yc(Ia,Va+1,Eb)
+        end)
+        local function Ta(Wa,la,Ic,g)
+            local tc,_a,M,Lb,uc,ic,rb,zb,wb,Qa,Wb,Bc,s_,c,Z,n_,A,La,za,Nb,tb,ra,R,m;
+            zb,_a=function(Wc,C,Ya)
+                _a[C]=oa(Ya,61396)-oa(Wc,47796)
+                return _a[C]
+            end,{};
+            c=_a[-13397]or zb(54498,-13397,40337)
+            while c~=41666 do
+                if c>31471 then
+                    if c>48226 then
+                        if c>56666 then
+                            if c<=61845 then
+                                if c<=59561 then
+                                    if c<58953 then
+                                        if c<=58385 then
+                                            if c>57316 then
+                                                if(uc>12)then
+                                                    c=_a[-10687]or zb(12680,-10687,11114)
+                                                    continue
+                                                else
+                                                    c=_a[-10613]or zb(15111,-10613,103153)
+                                                    continue
+                                                end
+                                                c=_a[-18975]or zb(41290,-18975,126891)
+                                            elseif c<=56816 then
+                                                c,Wa[ra[57579]]=_a[30806]or zb(32968,30806,127273),nil
+                                            else
+                                                if ra[35235]==133 then
+                                                    c=_a[-22278]or zb(11749,-22278,11446)
+                                                    continue
+                                                elseif ra[35235]==195 then
+                                                    c=_a[10852]or zb(21006,10852,101634)
+                                                    continue
+                                                elseif(ra[35235]==223)then
+                                                    c=_a[23499]or zb(44911,23499,7393)
+                                                    continue
+                                                else
+                                                    c=_a[14233]or zb(29784,14233,128958)
+                                                    continue
+                                                end
+                                                c=_a[-10181]or zb(52015,-10181,113096)
+                                            end
+                                        else
+                                            if not Z then
+                                                c=_a[-15527]or zb(51353,-15527,110957)
+                                                continue
+                                            end
+                                            c=26049
+                                        end
+                                    elseif c>59385 then
+                                        Qa,R=nil,Wa[ra[57579]];
+                                        Qa=Fb(R)==i_("\215\177\168\'\197\173\169*",'\177\196\198D')
+                                        if(not Qa)then
+                                            c=_a[11419]or zb(43782,11419,12547)
+                                            continue
+                                        else
+                                            c=_a[1141]or zb(16219,1141,16666)
+                                            continue
+                                        end
+                                        c=10463
+                                    elseif c<59301 then
+                                        wb-=1;
+                                        c,Ic[wb]=_a[-24323]or zb(47661,-24323,2766),{[2041]=12,[57579]=_d(ra[57579],193),[52113]=_d(ra[52113],73),[35235]=0}
+                                    elseif c<=59301 then
+                                        if(uc>242)then
+                                            c=_a[-1290]or zb(38968,-1290,21599)
+                                            continue
+                                        else
+                                            c=_a[-17941]or zb(63014,-17941,21525)
+                                            continue
+                                        end
+                                        c=_a[8763]or zb(41605,8763,4966)
+                                    else
+                                        N[ra[11916]]=Wa[ra[57579]];
+                                        wb+=1;
+                                        c=_a[-7022]or zb(21823,-7022,80856)
+                                    end
+                                elseif c>60991 then
+                                    if c>61293 then
+                                        wb+=ra[64467];
+                                        c=_a[1188]or zb(43604,1188,6837)
+                                    elseif c>61251 then
+                                        c,Nb=_a[23925]or zb(14091,23925,125738),Bc-Qa+1
+                                    else
+                                        rb=rb+Wb;
+                                        M=rb
+                                        if rb~=rb then
+                                            c=_a[31686]or zb(37069,31686,117109)
+                                        else
+                                            c=23512
+                                        end
+                                    end
+                                elseif c<=60556 then
+                                    if c>=60317 then
+                                        if c>60317 then
+                                            ra=Ic[wb];
+                                            uc,c=ra[2041],_a[8579]or zb(22347,8579,113684)
+                                        else
+                                            c,Wa[ra[57579]]=_a[31368]or zb(58023,31368,119616),{}
+                                        end
+                                    else
+                                        Qa=H(R)
+                                        if(Qa~=nil and Qa.__iter~=nil)then
+                                            c=_a[11997]or zb(151,11997,1281)
+                                            continue
+                                        else
+                                            c=_a[26246]or zb(28924,26246,123203)
+                                            continue
+                                        end
+                                        c=_a[-17763]or zb(51275,-17763,127967)
+                                    end
+                                else
+                                    if(Qa==3)then
+                                        c=_a[31621]or zb(33045,31621,5603)
+                                        continue
+                                    else
+                                        c=_a[18922]or zb(23560,18922,125784)
+                                        continue
+                                    end
+                                    c=_a[-30804]or zb(31065,-30804,3689)
+                                end
+                            elseif c<=64533 then
+                                if c>64346 then
+                                    if c>64403 then
+                                        if(uc>123)then
+                                            c=_a[28997]or zb(36264,28997,38108)
+                                            continue
+                                        else
+                                            c=_a[29210]or zb(56423,29210,25797)
+                                            continue
+                                        end
+                                        c=_a[4540]or zb(28182,4540,87799)
+                                    elseif c>64370 then
+                                        A,n_=Wa[Qa+1],nil;
+                                        rb=A;
+                                        n_=Fb(rb)==i_('\151\50\165\155\"\186','\249G\200')
+                                        if not n_ then
+                                            c=_a[-23157]or zb(65366,-23157,118007)
+                                            continue
+                                        end
+                                        c=_a[21660]or zb(24374,21660,5373)
+                                    else
+                                        if(uc>10)then
+                                            c=_a[18495]or zb(42786,18495,128066)
+                                            continue
+                                        else
+                                            c=_a[26669]or zb(20139,26669,105369)
+                                            continue
+                                        end
+                                        c=_a[27636]or zb(16857,27636,77882)
+                                    end
+                                elseif c<=62922 then
+                                    if c>62646 then
+                                        Qa,R,za=ra[11916],ra[28364],Wa[ra[57579]]
+                                        if((za==Qa)~=R)then
+                                            c=_a[19734]or zb(57124,19734,8744)
+                                            continue
+                                        else
+                                            c=_a[-28063]or zb(30664,-28063,113638)
+                                            continue
+                                        end
+                                        c=_a[-22539]or zb(42029,-22539,126158)
+                                    elseif c>62001 then
+                                        R[57159]=Nb;
+                                        c,A=13870,nil
+                                    else
+                                        if ra[35235]==9 then
+                                            c=_a[17551]or zb(33136,17551,19053)
+                                            continue
+                                        elseif ra[35235]==14 then
+                                            c=_a[-12529]or zb(26663,-12529,87816)
+                                            continue
+                                        else
+                                            c=_a[-22603]or zb(42140,-22603,5068)
+                                            continue
+                                        end
+                                        c=_a[-22908]or zb(14480,-22908,100721)
+                                    end
+                                else
+                                    Dc'';
+                                    c=_a[14874]or zb(27246,14874,6411)
+                                end
+                            elseif c>=64921 then
+                                if c>=65024 then
+                                    if c>65024 then
+                                        if uc>215 then
+                                            c=_a[2965]or zb(23247,2965,75764)
+                                            continue
+                                        else
+                                            c=_a[-10531]or zb(62414,-10531,31094)
+                                            continue
+                                        end
+                                        c=_a[-754]or zb(34750,-754,118367)
+                                    else
+                                        c,Wa[ra[57579]]=_a[-1966]or zb(27652,-1966,87269),#Wa[ra[52113]]
+                                    end
+                                else
+                                    R,za,Nb=qb(R);
+                                    c=_a[5775]or zb(57159,5775,2251)
+                                end
+                            elseif c<64557 then
+                                za,c=n_,44293
+                                continue
+                            elseif c<=64557 then
+                                Nb..=Wa[s_];
+                                c=_a[-20108]or zb(50105,-20108,119423)
+                            else
+                                wb-=1;
+                                Ic[wb],c={[2041]=242,[57579]=_d(ra[57579],18),[52113]=_d(ra[52113],113),[35235]=0},_a[-1757]or zb(39292,-1757,124829)
+                            end
+                        elseif c<52263 then
+                            if c>50423 then
+                                if c>51016 then
+                                    if c>51480 then
+                                        c,n_[(M-104)]=_a[-15531]or zb(13792,-15531,128635),ic
+                                    else
+                                        Lb=tb[52113];
+                                        ic=m[Lb]
+                                        if(ic==nil)then
+                                            c=_a[29414]or zb(16949,29414,86700)
+                                            continue
+                                        else
+                                            c=_a[-1708]or zb(58357,-1708,117542)
+                                            continue
+                                        end
+                                        c=_a[-13351]or zb(2125,-13351,102782)
+                                    end
+                                elseif c<50932 then
+                                    if c<=50483 then
+                                        A,n_=Ja(La[ra],za,Wa[Qa+1],Wa[Qa+2])
+                                        if(not A)then
+                                            c=_a[-31281]or zb(17983,-31281,81845)
+                                            continue
+                                        else
+                                            c=_a[24013]or zb(14285,24013,114687)
+                                            continue
+                                        end
+                                        c=49842
+                                    else
+                                        R,za,Nb=La
+                                        if(Nc(R)~=i_('\174\56#\173\188$\"\160','\200MM\206'))then
+                                            c=_a[29894]or zb(18045,29894,115741)
+                                            continue
+                                        else
+                                            c=_a[-11931]or zb(33748,-11931,21848)
+                                            continue
+                                        end
+                                        c=_a[24534]or zb(21638,24534,98442)
+                                    end
+                                elseif c>50932 then
+                                    if uc>154 then
+                                        c=_a[29701]or zb(33937,29701,28235)
+                                        continue
+                                    else
+                                        c=_a[3940]or zb(32781,3940,16469)
+                                        continue
+                                    end
+                                    c=_a[3525]or zb(53224,3525,112137)
+                                else
+                                    tb=Ic[wb];
+                                    wb+=1;
+                                    tc=tb[57579]
+                                    if(tc==0)then
+                                        c=_a[20451]or zb(54627,20451,7420)
+                                        continue
+                                    else
+                                        c=_a[-6958]or zb(39484,-6958,45670)
+                                        continue
+                                    end
+                                    c=_a[-14734]or zb(40786,-14734,24469)
+                                end
+                            elseif c<49302 then
+                                if c>48790 then
+                                    wb+=ra[64467];
+                                    c=_a[4483]or zb(62177,4483,115458)
+                                elseif c>48357 then
+                                    c,Nb=8838,nil
+                                elseif c>48281 then
+                                    c,n_=_a[25411]or zb(32562,25411,88861),n_..ta(_d(T(Nb,(M-101)+1),T(A,(M-101)%#A+1)))
+                                else
+                                    if(uc>52)then
+                                        c=_a[10532]or zb(12372,10532,18723)
+                                        continue
+                                    else
+                                        c=_a[-15078]or zb(30243,-15078,92846)
+                                        continue
+                                    end
+                                    c=_a[-20554]or zb(44498,-20554,5171)
+                                end
+                            elseif c>=50334 then
+                                if c<=50334 then
+                                    A=A+rb;
+                                    s_=A
+                                    if A~=A then
+                                        c=_a[-343]or zb(8826,-343,128328)
+                                    else
+                                        c=_a[-31913]or zb(4498,-31913,127542)
+                                    end
+                                else
+                                    ic={[1]=Lb,[3]=Wa};
+                                    c,m[Lb]=_a[21286]or zb(34198,21286,124167),ic
+                                end
+                            elseif c>49302 then
+                                if(n_==-2)then
+                                    c=_a[-6754]or zb(24561,-6754,111195)
+                                    continue
+                                else
+                                    c=_a[15482]or zb(3900,15482,109081)
+                                    continue
+                                end
+                                c=_a[11178]or zb(4403,11178,98268)
+                            else
+                                Nb,A=R[11916],ra[11916];
+                                A=i_('E\141\f\255!;\205\22','\222\239\19\214')..A;
+                                n_='';
+                                rb,c,Wb,s_=101,54847,1,(#Nb-1)+101
+                            end
+                        elseif c>54230 then
+                            if c>55580 then
+                                if c>=56641 then
+                                    if c>56641 then
+                                        wb-=1;
+                                        Ic[wb],c={[2041]=130,[57579]=_d(ra[57579],178),[52113]=_d(ra[52113],77),[35235]=0},_a[-384]or zb(51135,-384,101976)
+                                    else
+                                        s_=mb(A)
+                                        if(s_==nil)then
+                                            c=_a[-29827]or zb(40315,-29827,15453)
+                                            continue
+                                        else
+                                            c=_a[-25334]or zb(2677,-25334,114339)
+                                            continue
+                                        end
+                                        c=_a[-4687]or zb(31279,-4687,102021)
+                                    end
+                                else
+                                    if(uc>158)then
+                                        c=_a[-24871]or zb(3317,-24871,130883)
+                                        continue
+                                    else
+                                        c=_a[-4447]or zb(51565,-4447,120053)
+                                        continue
+                                    end
+                                    c=_a[-8223]or zb(7715,-8223,91852)
+                                end
+                            elseif c>54880 then
+                                Wa[ra[57579]],c=Wa[ra[52113]],_a[-5071]or zb(30019,-5071,89004)
+                            elseif c>54847 then
+                                if uc>13 then
+                                    c=_a[2961]or zb(15493,2961,106010)
+                                    continue
+                                else
+                                    c=_a[-4011]or zb(22824,-4011,74641)
+                                    continue
+                                end
+                                c=_a[-32085]or zb(17272,-32085,78233)
+                            elseif c>54442 then
+                                M=rb
+                                if s_~=s_ then
+                                    c=_a[1504]or zb(50225,1504,103801)
+                                else
+                                    c=_a[24250]or zb(39565,24250,37829)
+                                end
+                            else
+                                if(tb>=0 and Wb>M)or((tb<0 or tb~=tb)and Wb<M)then
+                                    c=_a[28271]or zb(16172,28271,118484)
+                                else
+                                    c=24841
+                                end
+                            end
+                        elseif c<53477 then
+                            if c<52517 then
+                                if c>52263 then
+                                    Nb,c=R-1,_a[15467]or zb(14963,15467,6098)
+                                else
+                                    A=mb(R)
+                                    if(A==nil)then
+                                        c=_a[-11842]or zb(45128,-11842,125314)
+                                        continue
+                                    else
+                                        c=_a[16828]or zb(25553,16828,4286)
+                                        continue
+                                    end
+                                    c=_a[816]or zb(23518,816,125115)
+                                end
+                            elseif c>52517 then
+                                Qa=ra[57579];
+                                R,za=Wa[Qa],nil;
+                                Nb=R;
+                                za=Fb(Nb)==i_('\210\30/\222\14\48','\188kB')
+                                if(not za)then
+                                    c=_a[-17041]or zb(39307,-17041,178)
+                                    continue
+                                else
+                                    c=_a[2214]or zb(32739,2214,77630)
+                                    continue
+                                end
+                                c=64403
+                            else
+                                Dc'';
+                                c=_a[-16568]or zb(38495,-16568,47646)
+                            end
+                        elseif c>=54206 then
+                            if c<=54206 then
+                                wb+=ra[64467];
+                                c=_a[-3006]or zb(53231,-3006,112136)
+                            else
+                                Dc(n_);
+                                c=_a[6727]or zb(52433,6727,120515)
+                            end
+                        elseif c>53477 then
+                            Wa[ra[52113]]=ia(ra[64996]);
+                            wb+=1;
+                            c=_a[-21071]or zb(1654,-21071,85655)
+                        else
+                            if(Wa[ra[57579]]<=Wa[ra[64996]])then
+                                c=_a[12346]or zb(12726,12346,16657)
+                                continue
+                            else
+                                c=_a[-21507]or zb(35231,-21507,467)
+                                continue
+                            end
+                            c=_a[-21378]or zb(13419,-21378,105652)
+                        end
+                    elseif c>=39784 then
+                        if c>=44293 then
+                            if c<47109 then
+                                if c<=46428 then
+                                    if c>=45421 then
+                                        if c<=45421 then
+                                            if(uc>60)then
+                                                c=_a[24399]or zb(28298,24399,84800)
+                                                continue
+                                            else
+                                                c=_a[-8157]or zb(27041,-8157,4594)
+                                                continue
+                                            end
+                                            c=_a[9987]or zb(12785,9987,98322)
+                                        else
+                                            if(not(s_<=R))then
+                                                c=_a[14256]or zb(23030,14256,88276)
+                                                continue
+                                            else
+                                                c=_a[-9249]or zb(11338,-9249,103595)
+                                                continue
+                                            end
+                                            c=_a[-25909]or zb(61628,-25909,115037)
+                                        end
+                                    elseif c>44293 then
+                                        Qa,R=ra[52113],ra[57579];
+                                        za,Nb=e_(da,Wa,'',Qa,R)
+                                        if not za then
+                                            c=_a[22609]or zb(39343,22609,24219)
+                                            continue
+                                        end
+                                        c=_a[-7085]or zb(12929,-7085,124375)
+                                    else
+                                        R[11916]=za
+                                        if(Qa==2)then
+                                            c=_a[5670]or zb(23261,5670,91722)
+                                            continue
+                                        else
+                                            c=_a[9447]or zb(8637,9447,91804)
+                                            continue
+                                        end
+                                        c=_a[-14340]or zb(29568,-14340,2256)
+                                    end
+                                elseif c>=46643 then
+                                    if c>46643 then
+                                        n_[(M-104)],c=ja[tb[52113]+1],_a[-29847]or zb(57184,-29847,8187)
+                                    else
+                                        c,Wa[ra[57579]]=_a[22010]or zb(470,22010,115778),za[ra[57159]][ra[21778]]
+                                    end
+                                else
+                                    if(M>=0 and s_>Wb)or((M<0 or M~=M)and s_<Wb)then
+                                        c=_a[-6050]or zb(54336,-6050,5931)
+                                    else
+                                        c=_a[10749]or zb(48304,10749,34280)
+                                    end
+                                end
+                            elseif c<47563 then
+                                if c>=47331 then
+                                    if c>47331 then
+                                        M={[2]=Wa[s_[52113]],[1]=2};
+                                        M[3]=M;
+                                        c,za[(rb-132)]=_a[-28542]or zb(29698,-28542,117234),M
+                                    else
+                                        if(uc>25)then
+                                            c=_a[-9315]or zb(39364,-9315,33587)
+                                            continue
+                                        else
+                                            c=_a[19316]or zb(52123,19316,113300)
+                                            continue
+                                        end
+                                        c=_a[-406]or zb(17408,-406,68833)
+                                    end
+                                elseif c>47109 then
+                                    t_(n_);
+                                    La[A],c=nil,_a[5218]or zb(22430,5218,98690)
+                                else
+                                    s_=Ic[wb];
+                                    wb+=1;
+                                    Wb=s_[57579]
+                                    if Wb==0 then
+                                        c=_a[-8264]or zb(18476,-8264,83030)
+                                        continue
+                                    elseif Wb==2 then
+                                        c=_a[-7932]or zb(30489,-7932,127231)
+                                        continue
+                                    end
+                                    c=_a[24880]or zb(23875,24880,118963)
+                                end
+                            elseif c<=47836 then
+                                if c<47771 then
+                                    wb+=1;
+                                    c=_a[7564]or zb(5247,7564,97432)
+                                elseif c>47771 then
+                                    wb+=ra[64467];
+                                    c=_a[-12971]or zb(53552,-12971,114641)
+                                else
+                                    if uc>58 then
+                                        c=_a[8131]or zb(59513,8131,120986)
+                                        continue
+                                    else
+                                        c=_a[-28007]or zb(6101,-28007,6555)
+                                        continue
+                                    end
+                                    c=_a[1251]or zb(43680,1251,6977)
+                                end
+                            else
+                                if Wa[ra[57579]]<Wa[ra[64996]]then
+                                    c=_a[7713]or zb(32532,7713,3064)
+                                    continue
+                                else
+                                    c=_a[-255]or zb(1451,-255,89952)
+                                    continue
+                                end
+                                c=_a[-30754]or zb(31765,-30754,83190)
+                            end
+                        elseif c<41916 then
+                            if c>=40428 then
+                                if c>=41142 then
+                                    if c>41142 then
+                                        s_=s_+M;
+                                        tb=s_
+                                        if s_~=s_ then
+                                            c=_a[13432]or zb(56774,13432,24194)
+                                        else
+                                            c=_a[12840]or zb(27431,12840,3722)
+                                        end
+                                    else
+                                        Wa[Qa+1]=s_;
+                                        c,A=_a[-28493]or zb(28214,-28493,1533),s_
+                                    end
+                                elseif c>40428 then
+                                    Wa[ra[57579]],c=za,_a[-2389]or zb(8547,-2389,123871)
+                                else
+                                    if(Qa==2)then
+                                        c=_a[-23294]or zb(45274,-23294,61478)
+                                        continue
+                                    else
+                                        c=_a[-14995]or zb(28568,-14995,99908)
+                                        continue
+                                    end
+                                    c=_a[-24104]or zb(12836,-24104,5904)
+                                end
+                            elseif c>=39971 then
+                                if c>39971 then
+                                    Qa,c,R=Ic[wb],10330,nil
+                                else
+                                    if uc>178 then
+                                        c=_a[-9642]or zb(43163,-9642,54837)
+                                        continue
+                                    else
+                                        c=_a[22991]or zb(49767,22991,9724)
+                                        continue
+                                    end
+                                    c=_a[-3214]or zb(19464,-3214,79081)
+                                end
+                            else
+                                c,A=_a[12196]or zb(11652,12196,23136),s_
+                                continue
+                            end
+                        elseif c<43276 then
+                            if c>=42671 then
+                                if c<=42671 then
+                                    if(ra[35235]==238)then
+                                        c=_a[-21619]or zb(15687,-21619,10803)
+                                        continue
+                                    else
+                                        c=_a[-17382]or zb(40230,-17382,20099)
+                                        continue
+                                    end
+                                    c=_a[-17845]or zb(17390,-17845,78351)
+                                else
+                                    A,c=A..ta(_d(T(za,(Wb-167)+1),T(Nb,(Wb-167)%#Nb+1))),_a[11109]or zb(33695,11109,40370)
+                                end
+                            else
+                                if not(R<=s_)then
+                                    c=_a[30523]or zb(39975,30523,40847)
+                                    continue
+                                end
+                                c=_a[-16573]or zb(22769,-16573,76050)
+                            end
+                        elseif c<43732 then
+                            if c>43276 then
+                                Nb,c=nil,29794
+                            else
+                                A,n_=R(za,Nb);
+                                Nb=A
+                                if Nb==nil then
+                                    c=50506
+                                else
+                                    c=26179
+                                end
+                            end
+                        elseif c>43732 then
+                            Dc'';
+                            c=_a[31950]or zb(28922,31950,99536)
+                        else
+                            rb=Nb
+                            if A~=A then
+                                c=_a[3598]or zb(26025,3598,76874)
+                            else
+                                c=_a[10350]or zb(2936,10350,126571)
+                            end
+                        end
+                    elseif c>35419 then
+                        if c>37645 then
+                            if c>=38751 then
+                                if c>39167 then
+                                    c,rb=_a[1909]or zb(28436,1909,116641),za-1
+                                elseif c>38751 then
+                                    if(ra[35235]==50)then
+                                        c=_a[21873]or zb(10709,21873,98125)
+                                        continue
+                                    else
+                                        c=_a[24478]or zb(33539,24478,33426)
+                                        continue
+                                    end
+                                    c=_a[10793]or zb(23364,10793,76197)
+                                else
+                                    Wa[Qa+2]=Wa[Qa+3];
+                                    wb+=ra[64467];
+                                    c=_a[-29530]or zb(11525,-29530,103398)
+                                end
+                            elseif c>=37924 then
+                                if c>37924 then
+                                    if(Qa==3)then
+                                        c=_a[17343]or zb(22187,17343,85382)
+                                        continue
+                                    else
+                                        c=_a[18493]or zb(27634,18493,110254)
+                                        continue
+                                    end
+                                    c=_a[-4672]or zb(40551,-4672,31443)
+                                else
+                                    if uc>28 then
+                                        c=_a[-16511]or zb(3112,-16511,105770)
+                                        continue
+                                    else
+                                        c=_a[9535]or zb(62251,9535,23910)
+                                        continue
+                                    end
+                                    c=_a[17597]or zb(8063,17597,91544)
+                                end
+                            else
+                                tb=s_
+                                if Wb~=Wb then
+                                    c=_a[-24383]or zb(41362,-24383,19173)
+                                else
+                                    c=_a[11514]or zb(10640,11514,108313)
+                                end
+                            end
+                        elseif c<=36556 then
+                            if c>=35987 then
+                                if c>=36404 then
+                                    if c<=36404 then
+                                        Nb=Wa[Qa];
+                                        rb,n_,A,c=1,R,Qa+1,_a[-31877]or zb(1831,-31877,127575)
+                                    else
+                                        Dc'';
+                                        c=_a[-2391]or zb(64317,-2391,17419)
+                                    end
+                                else
+                                    wb+=ra[64467];
+                                    c=_a[-32499]or zb(29368,-32499,82777)
+                                end
+                            elseif c<=35574 then
+                                if(Wa[ra[57579]])then
+                                    c=_a[-22833]or zb(32658,-22833,122856)
+                                    continue
+                                else
+                                    c=_a[-13976]or zb(27715,-13976,87212)
+                                    continue
+                                end
+                                c=_a[20736]or zb(56745,20736,107594)
+                            else
+                                wb+=ra[64467];
+                                c=_a[15609]or zb(33803,15609,117908)
+                            end
+                        elseif c<=37365 then
+                            if c<=36933 then
+                                Za(n_,1,R,Qa+3,Wa);
+                                Wa[Qa+2]=Wa[Qa+3];
+                                wb+=ra[64467];
+                                c=_a[9079]or zb(22981,9079,75814)
+                            else
+                                if A>0 then
+                                    c=_a[8343]or zb(40020,8343,13288)
+                                    continue
+                                else
+                                    c=_a[29471]or zb(50056,29471,127788)
+                                    continue
+                                end
+                                c=_a[19954]or zb(33833,19954,117962)
+                            end
+                        else
+                            Qa=la[ra[11916]+1];
+                            R=Qa[61519];
+                            za=ia(R);
+                            Wa[ra[57579]]=Ca(Qa,za);
+                            A,c,Nb,n_=(R)+132,_a[-18640]or zb(46508,-18640,22072),133,1
+                        end
+                    elseif c>33566 then
+                        if c>=34044 then
+                            if c<35339 then
+                                if c>34044 then
+                                    wb+=1;
+                                    c=_a[16618]or zb(31994,16618,83227)
+                                else
+                                    if(s_>=0 and n_>rb)or((s_<0 or s_~=s_)and n_<rb)then
+                                        c=_a[12908]or zb(7460,12908,130745)
+                                    else
+                                        c=43262
+                                    end
+                                end
+                            elseif c<=35339 then
+                                Nb,c=rb,18630
+                                continue
+                            else
+                                rb=rb+Wb;
+                                M=rb
+                                if rb~=rb then
+                                    c=_a[29108]or zb(47609,29108,2074)
+                                else
+                                    c=17709
+                                end
+                            end
+                        elseif c>33640 then
+                            Qa[11916]=R;
+                            ra[2041],c=59,_a[-1890]or zb(53351,-1890,106624)
+                        elseif c<=33617 then
+                            Lb={[2]=Wa[tb[52113]],[1]=2};
+                            Lb[3]=Lb;
+                            n_[(M-104)],c=Lb,_a[17836]or zb(41672,17836,19715)
+                        else
+                            if(uc>130)then
+                                c=_a[25493]or zb(56079,25493,119306)
+                                continue
+                            else
+                                c=_a[-7272]or zb(56854,-7272,102243)
+                                continue
+                            end
+                            c=_a[10525]or zb(744,10525,94985)
+                        end
+                    elseif c<=33195 then
+                        if c<=32814 then
+                            if c<32006 then
+                                wb-=1;
+                                Ic[wb],c={[2041]=18,[57579]=_d(ra[57579],238),[52113]=_d(ra[52113],35),[35235]=0},_a[-11267]or zb(24675,-11267,86156)
+                            elseif c>32006 then
+                                if(uc>9)then
+                                    c=_a[-20990]or zb(46935,-20990,63945)
+                                    continue
+                                else
+                                    c=_a[-27375]or zb(23690,-27375,117631)
+                                    continue
+                                end
+                                c=_a[26627]or zb(54527,26627,113944)
+                            else
+                                Wa[ra[35235]],c=Wa[ra[57579]]+ra[11916],_a[-17193]or zb(31965,-17193,83262)
+                            end
+                        elseif c<=33068 then
+                            A,n_=R(za,Nb);
+                            Nb=A
+                            if Nb==nil then
+                                c=_a[25087]or zb(55623,25087,2597)
+                            else
+                                c=47181
+                            end
+                        else
+                            wb+=1;
+                            c=_a[17159]or zb(54617,17159,113594)
+                        end
+                    elseif c>33278 then
+                        c,Wa[ra[35235]]=_a[-25792]or zb(65450,-25792,116299),Wa[ra[57579]]+Wa[ra[52113]]
+                    elseif c<=33230 then
+                        c,Wa[ra[35235]]=_a[11682]or zb(31040,11682,83873),Nb
+                    else
+                        c=_a[11638]or zb(62244,11638,902)
+                        continue
+                    end
+                elseif c<18630 then
+                    if c<=10463 then
+                        if c>=7191 then
+                            if c<9155 then
+                                if c>7632 then
+                                    if c>7820 then
+                                        A,n_=R[57159],ra[57159];
+                                        n_=i_('\166\15\232\218\194\185)3','=m\247\243')..n_;
+                                        rb='';
+                                        c,Wb,s_,M=_a[19751]or zb(51359,19751,26125),(#A-1)+23,23,1
+                                    elseif c<=7812 then
+                                        c,R[21778]=_a[-32264]or zb(22459,-32264,124171),A
+                                    else
+                                        wb+=1;
+                                        c=_a[-2763]or zb(41601,-2763,4962)
+                                    end
+                                elseif c<=7523 then
+                                    if c<=7374 then
+                                        if c<=7191 then
+                                            if uc>89 then
+                                                c=_a[27326]or zb(45251,27326,56549)
+                                                continue
+                                            else
+                                                c=_a[12430]or zb(54761,12430,17093)
+                                                continue
+                                            end
+                                            c=_a[-21467]or zb(30770,-21467,84179)
+                                        else
+                                            if uc>78 then
+                                                c=_a[23106]or zb(4118,23106,121420)
+                                                continue
+                                            else
+                                                c=_a[19984]or zb(5249,19984,126231)
+                                                continue
+                                            end
+                                            c=_a[3876]or zb(61828,3876,114789)
+                                        end
+                                    else
+                                        Qa=ra[11916];
+                                        Wa[ra[35235]][Qa]=Wa[ra[52113]];
+                                        wb+=1;
+                                        c=_a[2447]or zb(5260,2447,97645)
+                                    end
+                                else
+                                    ra[2041]=123;
+                                    wb+=1;
+                                    c=_a[1150]or zb(55594,1150,108491)
+                                end
+                            elseif c>=10177 then
+                                if c>10426 then
+                                    wb+=ra[64467];
+                                    c=_a[20932]or zb(37564,20932,123741)
+                                elseif c<=10330 then
+                                    if c>10177 then
+                                        za,Nb=Qa[11916],ra[11916];
+                                        Nb=i_('\191f\2\25\219\208\195\240','$\4\29\48')..Nb;
+                                        A='';
+                                        n_,rb,c,s_=167,(#za-1)+167,21098,1
+                                    else
+                                        if(uc>34)then
+                                            c=_a[-41]or zb(34698,-41,19493)
+                                            continue
+                                        else
+                                            c=_a[-13805]or zb(55147,-13805,126423)
+                                            continue
+                                        end
+                                        c=_a[427]or zb(51701,427,112662)
+                                    end
+                                else
+                                    if(uc>112)then
+                                        c=_a[5099]or zb(32982,5099,14580)
+                                        continue
+                                    else
+                                        c=_a[5473]or zb(338,5473,122237)
+                                        continue
+                                    end
+                                    c=_a[-22505]or zb(55075,-22505,114124)
+                                end
+                            elseif c<=9733 then
+                                if c>=9278 then
+                                    if c>9278 then
+                                        Wa[Qa]=A;
+                                        c,R=_a[7398]or zb(23355,7398,78582),A
+                                    else
+                                        if(uc>119)then
+                                            c=_a[-26545]or zb(24570,-26545,100653)
+                                            continue
+                                        else
+                                            c=_a[23730]or zb(61621,23730,22988)
+                                            continue
+                                        end
+                                        c=_a[11493]or zb(27970,11493,86947)
+                                    end
+                                else
+                                    wb+=1;
+                                    c=_a[9847]or zb(42288,9847,125905)
+                                end
+                            else
+                                Wa[ra[35235]]=ra[52113]==1;
+                                wb+=ra[57579];
+                                c=_a[-4188]or zb(53170,-4188,112211)
+                            end
+                        elseif c>4889 then
+                            if c>=5823 then
+                                if c<=6077 then
+                                    if c<=6062 then
+                                        if c<=5823 then
+                                            R=g[13495];
+                                            c,Bc=_a[5880]or zb(6856,5880,125203),Qa+R-1
+                                        else
+                                            tb=s_
+                                            if Wb~=Wb then
+                                                c=_a[27351]or zb(25401,27351,117925)
+                                            else
+                                                c=4043
+                                            end
+                                        end
+                                    else
+                                        c,Wa[ra[35235]]=_a[13880]or zb(33354,13880,127659),Wa[ra[52113]]/ra[11916]
+                                    end
+                                else
+                                    wb+=ra[64467];
+                                    c=_a[-30190]or zb(45489,-30190,82)
+                                end
+                            elseif c>=5543 then
+                                if c>5543 then
+                                    if(uc>189)then
+                                        c=_a[-8199]or zb(1608,-8199,114653)
+                                        continue
+                                    else
+                                        c=_a[-5382]or zb(65319,-5382,18478)
+                                        continue
+                                    end
+                                    c=_a[3610]or zb(10731,3610,104500)
+                                else
+                                    s_,Wb=Wa[Qa+2],nil;
+                                    M=s_;
+                                    Wb=Fb(M)==i_('\219c\226\215s\253','\181\22\143')
+                                    if not Wb then
+                                        c=_a[2363]or zb(39532,2363,39076)
+                                        continue
+                                    end
+                                    c=_a[-30862]or zb(16955,-30862,91472)
+                                end
+                            else
+                                c,Wa[ra[57579]]=_a[-29970]or zb(6062,-29970,127642),za[ra[57159]]
+                            end
+                        elseif c<=3259 then
+                            if c>=1224 then
+                                if c<2106 then
+                                    Qa=ra[57579];
+                                    R,za=Wa[Qa],Wa[Qa+1];
+                                    Nb=Wa[Qa+2]+za;
+                                    Wa[Qa+2]=Nb
+                                    if(za>0)then
+                                        c=_a[-10725]or zb(30312,-10725,130231)
+                                        continue
+                                    else
+                                        c=_a[12435]or zb(59147,12435,29402)
+                                        continue
+                                    end
+                                    c=_a[2193]or zb(49436,2193,102397)
+                                elseif c<=2106 then
+                                    Qa,R,c,za=ra[31038],Ic[wb+1],49302,nil
+                                else
+                                    Qa,R,za=_d(ra[35235],202),_d(ra[52113],23),_d(ra[57579],249);
+                                    Nb,A=R==0 and Bc-Qa or R-1,Wa[Qa];
+                                    n_,rb=jb(A(yc(Wa,Qa+1,Qa+Nb)))
+                                    if za==0 then
+                                        c=_a[-24558]or zb(27926,-24558,109893)
+                                        continue
+                                    else
+                                        c=_a[666]or zb(31364,666,111967)
+                                        continue
+                                    end
+                                    c=_a[17917]or zb(16643,17917,106840)
+                                end
+                            elseif c>293 then
+                                Bc,c,wb,m,La,Z=-1,58497,1,cd({},{__mode=i_('\129\132','\247')}),cd({},{__mode=i_('\209\201','\186')}),false
+                            else
+                                R,za,Nb=Qa.__iter(R);
+                                c=_a[-29845]or zb(52070,-29845,7466)
+                            end
+                        elseif c>4043 then
+                            wb-=1;
+                            c,Ic[wb]=_a[9957]or zb(35371,9957,129780),{[2041]=152,[57579]=_d(ra[57579],73),[52113]=_d(ra[52113],90),[35235]=0}
+                        elseif c>4026 then
+                            if(M>=0 and s_>Wb)or((M<0 or M~=M)and s_<Wb)then
+                                c=_a[22447]or zb(34831,22447,37707)
+                            else
+                                c=30696
+                            end
+                        else
+                            tc=Wb
+                            if M~=M then
+                                c=_a[-29097]or zb(31648,-29097,111528)
+                            else
+                                c=_a[28098]or zb(33424,28098,123674)
+                            end
+                        end
+                    elseif c<15860 then
+                        if c>=13671 then
+                            if c>=14651 then
+                                if c<=15658 then
+                                    if c>14722 then
+                                        if tc==1 then
+                                            c=_a[-3765]or zb(888,-3765,93488)
+                                            continue
+                                        elseif(tc==2)then
+                                            c=_a[20618]or zb(61815,20618,126253)
+                                            continue
+                                        else
+                                            c=_a[22156]or zb(1338,22156,108093)
+                                            continue
+                                        end
+                                        c=_a[-30428]or zb(28206,-30428,110881)
+                                    elseif c>14651 then
+                                        if uc>24 then
+                                            c=_a[9878]or zb(62435,9878,128488)
+                                            continue
+                                        else
+                                            c=_a[-10325]or zb(19296,-10325,75744)
+                                            continue
+                                        end
+                                        c=_a[-13487]or zb(26943,-13487,88024)
+                                    else
+                                        n_=n_+s_;
+                                        Wb=n_
+                                        if n_~=n_ then
+                                            c=_a[18189]or zb(9918,18189,125491)
+                                        else
+                                            c=34044
+                                        end
+                                    end
+                                else
+                                    if uc>62 then
+                                        c=_a[-2571]or zb(51797,-2571,25211)
+                                        continue
+                                    else
+                                        c=_a[11118]or zb(31526,11118,105771)
+                                        continue
+                                    end
+                                    c=_a[19534]or zb(10594,19534,104323)
+                                end
+                            elseif c<=13870 then
+                                if c<=13671 then
+                                    Qa=Wa[ra[35235]];
+                                    c,Wa[ra[57579]]=_a[-26048]or zb(41388,-26048,4173),if Qa then Qa else Wa[ra[52113]]or false
+                                else
+                                    n_,rb=R[21778],ra[21778];
+                                    rb=i_('t\216\168.\16ni\199','\239\186\183\a')..rb;
+                                    s_='';
+                                    M,tb,Wb,c=(#n_-1)+135,1,135,_a[-19863]or zb(44789,-19863,52271)
+                                end
+                            else
+                                R,za,Nb=m
+                                if Nc(R)~=i_('\248{\25\247\234g\24\250','\158\14w\148')then
+                                    c=_a[18270]or zb(27618,18270,86820)
+                                    continue
+                                end
+                                c=_a[-2969]or zb(58889,-2969,125469)
+                            end
+                        elseif c>12032 then
+                            if c<13199 then
+                                R,za,Nb=Qa.__iter(R);
+                                c=_a[31676]or zb(3146,31676,102366)
+                            elseif c>13199 then
+                                c,Wa[ra[57579]]=_a[24573]or zb(59282,24573,110195),ra[11916]
+                            else
+                                if ra[35235]==92 then
+                                    c=_a[8157]or zb(65493,8157,47022)
+                                    continue
+                                elseif(ra[35235]==206)then
+                                    c=_a[21535]or zb(32086,21535,109450)
+                                    continue
+                                else
+                                    c=_a[19518]or zb(18220,19518,84883)
+                                    continue
+                                end
+                                c=_a[-2049]or zb(2005,-2049,85558)
+                            end
+                        elseif c>11463 then
+                            Qa=H(R)
+                            if(Qa~=nil and Qa.__iter~=nil)then
+                                c=_a[-9731]or zb(45787,-9731,58944)
+                                continue
+                            else
+                                c=_a[24110]or zb(49114,24110,43618)
+                                continue
+                            end
+                            c=_a[-12989]or zb(46431,-12989,32451)
+                        elseif c<=11281 then
+                            if c<=11025 then
+                                if(uc>59)then
+                                    c=_a[-21392]or zb(61382,-21392,31604)
+                                    continue
+                                else
+                                    c=_a[21083]or zb(31607,21083,103306)
+                                    continue
+                                end
+                                c=_a[-22387]or zb(17878,-22387,68663)
+                            else
+                                wb-=1;
+                                c,Ic[wb]=_a[1460]or zb(38464,1460,130721),{[2041]=229,[57579]=_d(ra[57579],238),[52113]=_d(ra[52113],221),[35235]=0}
+                            end
+                        else
+                            A={za(Wa[Qa+1],Wa[Qa+2])};
+                            Za(A,1,R,Qa+3,Wa)
+                            if(Wa[Qa+3]~=nil)then
+                                c=_a[15991]or zb(15212,15991,128739)
+                                continue
+                            else
+                                c=_a[-11270]or zb(43477,-11270,8952)
+                                continue
+                            end
+                            c=_a[-1346]or zb(58233,-1346,119194)
+                        end
+                    elseif c<=17274 then
+                        if c>=16207 then
+                            if c>16482 then
+                                Qa,R=ra[31038],ra[11916];
+                                za=N[R]or z[47242][R]
+                                if(Qa==1)then
+                                    c=_a[-28409]or zb(2259,-28409,114608)
+                                    continue
+                                else
+                                    c=_a[-14499]or zb(27310,-14499,98770)
+                                    continue
+                                end
+                                c=_a[-12969]or zb(24692,-12969,107808)
+                            elseif c>16456 then
+                                s_=s_+M;
+                                tb=s_
+                                if s_~=s_ then
+                                    c=_a[6045]or zb(17522,6045,91909)
+                                else
+                                    c=_a[17681]or zb(33403,17681,428)
+                                end
+                            elseif c>16207 then
+                                if(Nc(R)==i_('>s(~/','J\18'))then
+                                    c=_a[-16753]or zb(13029,-16753,92734)
+                                    continue
+                                else
+                                    c=_a[31751]or zb(63591,31751,11307)
+                                    continue
+                                end
+                                c=_a[-25456]or zb(25420,-25456,111856)
+                            else
+                                if(R<=Nb)then
+                                    c=_a[-28538]or zb(15260,-28538,110572)
+                                    continue
+                                else
+                                    c=_a[-18114]or zb(35572,-18114,129813)
+                                    continue
+                                end
+                                c=_a[-29467]or zb(24287,-29467,75576)
+                            end
+                        elseif c>15981 then
+                            wb+=ra[64467];
+                            c=_a[-23961]or zb(14187,-23961,105908)
+                        elseif c>15913 then
+                            if(uc>3)then
+                                c=_a[3244]or zb(54807,3244,5858)
+                                continue
+                            else
+                                c=_a[-15647]or zb(25786,-15647,1309)
+                                continue
+                            end
+                            c=_a[-6426]or zb(22122,-6426,81547)
+                        elseif c<=15860 then
+                            wb-=1;
+                            Ic[wb],c={[2041]=80,[57579]=_d(ra[57579],199),[52113]=_d(ra[52113],77),[35235]=0},_a[13804]or zb(13831,13804,106208)
+                        else
+                            if uc>48 then
+                                c=_a[31439]or zb(39539,31439,29209)
+                                continue
+                            else
+                                c=_a[-19392]or zb(1260,-19392,7319)
+                                continue
+                            end
+                            c=_a[-16587]or zb(55741,-16587,108638)
+                        end
+                    elseif c>17709 then
+                        if c<=18055 then
+                            if(Nb<=R)then
+                                c=_a[7310]or zb(31456,7310,120429)
+                                continue
+                            else
+                                c=_a[-18032]or zb(42313,-18032,125866)
+                                continue
+                            end
+                            c=_a[30977]or zb(45263,30977,296)
+                        else
+                            Qa,R=ra[57579],ra[11916];
+                            Bc=Qa+6;
+                            za,Nb=Wa[Qa],nil;
+                            Nb=Fb(za)==i_('+\147\26\237\57\143\27\224','M\230t\142')
+                            if(Nb)then
+                                c=_a[23257]or zb(45954,23257,55849)
+                                continue
+                            else
+                                c=_a[-8632]or zb(60657,-8632,128172)
+                                continue
+                            end
+                            c=_a[-9106]or zb(7356,-9106,91485)
+                        end
+                    elseif c>=17704 then
+                        if c>17704 then
+                            if(Wb>=0 and rb>s_)or((Wb<0 or Wb~=Wb)and rb<s_)then
+                                c=_a[3727]or zb(58706,3727,109491)
+                            else
+                                c=50932
+                            end
+                        else
+                            if(ra[35235]==84)then
+                                c=_a[25082]or zb(43380,25082,39940)
+                                continue
+                            else
+                                c=_a[29123]or zb(50855,29123,111651)
+                                continue
+                            end
+                            c=_a[30617]or zb(64685,30617,116046)
+                        end
+                    elseif c<=17388 then
+                        if(uc>126)then
+                            c=_a[20922]or zb(3045,20922,124860)
+                            continue
+                        else
+                            c=_a[31689]or zb(58604,31689,108933)
+                            continue
+                        end
+                        c=_a[4315]or zb(44634,4315,5819)
+                    else
+                        if Nc(R)==i_(')\242?\255\56',']\147')then
+                            c=_a[-467]or zb(48884,-467,35593)
+                            continue
+                        end
+                        c=_a[-21934]or zb(63109,-21934,6889)
+                    end
+                elseif c>25656 then
+                    if c>=28663 then
+                        if c<30606 then
+                            if c>29794 then
+                                if c>=30403 then
+                                    if c>30403 then
+                                        return yc(Wa,Qa,Qa+Nb-1)
+                                    else
+                                        if(uc>108)then
+                                            c=_a[32040]or zb(7279,32040,103962)
+                                            continue
+                                        else
+                                            c=_a[-1271]or zb(56399,-1271,10227)
+                                            continue
+                                        end
+                                        c=_a[-6328]or zb(21298,-6328,74195)
+                                    end
+                                else
+                                    if(uc>140)then
+                                        c=_a[-25471]or zb(10845,-25471,130003)
+                                        continue
+                                    else
+                                        c=_a[2871]or zb(11017,2871,1831)
+                                        continue
+                                    end
+                                    c=_a[-27875]or zb(22463,-27875,81496)
+                                end
+                            elseif c>=29372 then
+                                if c>29372 then
+                                    A,n_=R[57159],ra[57159];
+                                    n_=i_('X\4\22\244<\178\215\29','\195f\t\221')..n_;
+                                    rb='';
+                                    M,s_,Wb,c=1,173,(#A-1)+173,37905
+                                else
+                                    if(rb>=0 and A>n_)or((rb<0 or rb~=rb)and A<n_)then
+                                        c=_a[5683]or zb(37544,5683,17982)
+                                    else
+                                        c=_a[-1488]or zb(29419,-1488,76632)
+                                    end
+                                end
+                            elseif c>28663 then
+                                wb+=1;
+                                c=_a[-30156]or zb(57856,-30156,119521)
+                            else
+                                if(uc>114)then
+                                    c=_a[-32161]or zb(61287,-32161,125381)
+                                    continue
+                                else
+                                    c=_a[-25091]or zb(41810,-25091,36618)
+                                    continue
+                                end
+                                c=_a[-5613]or zb(57502,-5613,119167)
+                            end
+                        elseif c>=31077 then
+                            if c>=31260 then
+                                if c>31260 then
+                                    Wb=Wb+tb;
+                                    tc=Wb
+                                    if Wb~=Wb then
+                                        c=_a[-8933]or zb(44262,-8933,24174)
+                                    else
+                                        c=54442
+                                    end
+                                else
+                                    wb-=1;
+                                    Ic[wb],c={[2041]=177,[57579]=_d(ra[57579],81),[52113]=_d(ra[52113],165),[35235]=0},_a[-1453]or zb(41611,-1453,4884)
+                                end
+                            elseif c>31077 then
+                                Qa,R=ra[57579],ra[52113];
+                                za=R-1
+                                if(za==-1)then
+                                    c=_a[-23496]or zb(17605,-23496,66058)
+                                    continue
+                                else
+                                    c=_a[-22269]or zb(31852,-22269,97327)
+                                    continue
+                                end
+                                c=30527
+                            else
+                                wb+=ra[64467];
+                                c=_a[-29967]or zb(10369,-29967,104802)
+                            end
+                        elseif c<30696 then
+                            if c>30606 then
+                                M=rb
+                                if s_~=s_ then
+                                    c=_a[16879]or zb(39394,16879,124931)
+                                else
+                                    c=_a[-3830]or zb(28430,-3830,128307)
+                                end
+                            else
+                                if uc>224 then
+                                    c=_a[-18678]or zb(37040,-18678,126196)
+                                    continue
+                                else
+                                    c=_a[2652]or zb(28605,2652,116467)
+                                    continue
+                                end
+                                c=_a[-13827]or zb(33909,-13827,117910)
+                            end
+                        elseif c<=30696 then
+                            rb,c=rb..ta(_d(T(A,(tb-23)+1),T(n_,(tb-23)%#n_+1))),_a[9657]or zb(6048,9657,106957)
+                        else
+                            La[ra]=nil;
+                            wb+=1;
+                            c=_a[-29696]or zb(7153,-29696,92690)
+                        end
+                    elseif c>27125 then
+                        if c<=27671 then
+                            if c<27414 then
+                                if c>27222 then
+                                    c,Bc=_a[-578]or zb(18016,-578,106621),Qa+rb-1
+                                else
+                                    Wa[Qa+2]=tb;
+                                    s_,c=tb,_a[-2610]or zb(58352,-2610,1261)
+                                end
+                            elseif c>27414 then
+                                if(uc>115)then
+                                    c=_a[-16729]or zb(13326,-16729,31830)
+                                    continue
+                                else
+                                    c=_a[27469]or zb(18119,27469,99262)
+                                    continue
+                                end
+                                c=_a[17703]or zb(52915,17703,112476)
+                            else
+                                wb+=ra[64467];
+                                c=_a[-20595]or zb(34937,-20595,129178)
+                            end
+                        elseif c>27935 then
+                            if(uc>229)then
+                                c=_a[-1296]or zb(44959,-1296,46471)
+                                continue
+                            else
+                                c=_a[7539]or zb(31076,7539,119946)
+                                continue
+                            end
+                            c=_a[4272]or zb(18054,4272,69479)
+                        else
+                            Qa=ra[11916];
+                            Wa[ra[57579]]=N[Qa]or z[47242][Qa];
+                            wb+=1;
+                            c=_a[-27226]or zb(45185,-27226,354)
+                        end
+                    elseif c>26732 then
+                        if c<=27101 then
+                            if c<=26899 then
+                                Qa=ra[11916];
+                                Wa[ra[57579]]=Wa[ra[35235]][Qa];
+                                wb+=1;
+                                c=_a[-7950]or zb(61830,-7950,114791)
+                            else
+                                c,R=_a[-4211]or zb(15953,-4211,124637),A
+                                continue
+                            end
+                        else
+                            wb-=1;
+                            Ic[wb],c={[2041]=141,[57579]=_d(ra[57579],207),[52113]=_d(ra[52113],4),[35235]=0},_a[22868]or zb(9534,22868,93151)
+                        end
+                    elseif c<=26187 then
+                        if c>=26179 then
+                            if c<=26179 then
+                                n_[2]=n_[3][n_[1]];
+                                n_[3]=n_;
+                                n_[1]=2;
+                                m[A],c=nil,_a[16303]or zb(63477,16303,6553)
+                            else
+                                Za(g[41430],1,R,Qa,Wa);
+                                c=_a[-7941]or zb(35191,-7941,128912)
+                            end
+                        else
+                            Z=false;
+                            wb+=1
+                            if uc>113 then
+                                c=_a[24767]or zb(29984,24767,128780)
+                                continue
+                            else
+                                c=_a[32632]or zb(60473,32632,130290)
+                                continue
+                            end
+                            c=_a[-30531]or zb(33927,-30531,118112)
+                        end
+                    elseif c>26291 then
+                        wb+=ra[64467];
+                        c=_a[23429]or zb(59257,23429,109978)
+                    else
+                        Qa,R,za=ra[11916],ra[28364],Wa[ra[57579]]
+                        if(za==Qa)~=R then
+                            c=_a[14816]or zb(917,14816,109492)
+                            continue
+                        else
+                            c=_a[2216]or zb(42324,2216,39781)
+                            continue
+                        end
+                        c=_a[768]or zb(10921,768,105290)
+                    end
+                elseif c>21713 then
+                    if c<24560 then
+                        if c>22384 then
+                            if c>=23126 then
+                                if c<=23126 then
+                                    if uc>175 then
+                                        c=_a[12051]or zb(46326,12051,126887)
+                                        continue
+                                    else
+                                        c=_a[24877]or zb(26727,24877,75593)
+                                        continue
+                                    end
+                                    c=_a[20469]or zb(36675,20469,128428)
+                                else
+                                    if(Wb>=0 and rb>s_)or((Wb<0 or Wb~=Wb)and rb<s_)then
+                                        c=_a[-26075]or zb(52879,-26075,106423)
+                                    else
+                                        c=48357
+                                    end
+                                end
+                            else
+                                if uc>198 then
+                                    c=_a[17426]or zb(5367,17426,97552)
+                                    continue
+                                else
+                                    c=_a[15091]or zb(36178,15091,47773)
+                                    continue
+                                end
+                                c=_a[-15663]or zb(31084,-15663,83853)
+                            end
+                        elseif c>=22326 then
+                            if c>22326 then
+                                Nb=Nb+n_;
+                                rb=Nb
+                                if Nb~=Nb then
+                                    c=_a[26931]or zb(48902,26931,1511)
+                                else
+                                    c=20467
+                                end
+                            else
+                                Qa,R=nil,_d(ra[36133],1679);
+                                Qa=if R<32768 then R else R-65536;
+                                za=Qa;
+                                c,Wa[_d(ra[57579],167)]=_a[-30910]or zb(24518,-30910,75303),za
+                            end
+                        elseif c<=22168 then
+                            tb=mb(s_)
+                            if(tb==nil)then
+                                c=_a[-1317]or zb(9078,-1317,116570)
+                                continue
+                            else
+                                c=_a[-16634]or zb(10151,-16634,125117)
+                                continue
+                            end
+                            c=27222
+                        else
+                            Qa=ja[ra[52113]+1];
+                            Wa[ra[57579]],c=Qa[3][Qa[1]],_a[18263]or zb(33161,18263,127082)
+                        end
+                    elseif c<=24841 then
+                        if c>24733 then
+                            s_,c=s_..ta(_d(T(n_,(tc-135)+1),T(rb,(tc-135)%#rb+1))),_a[-14132]or zb(38777,-14132,18280)
+                        elseif c>=24592 then
+                            if c<=24592 then
+                                wb-=1;
+                                Ic[wb],c={[2041]=253,[57579]=_d(ra[57579],123),[52113]=_d(ra[52113],79),[35235]=0},_a[-28747]or zb(13394,-28747,105651)
+                            else
+                                R,za,Nb=qb(R);
+                                c=_a[12334]or zb(43699,12334,22215)
+                            end
+                        else
+                            s_=A
+                            if n_~=n_ then
+                                c=_a[-1586]or zb(44481,-1586,30359)
+                            else
+                                c=_a[-31375]or zb(38186,-31375,19854)
+                            end
+                        end
+                    elseif c>25191 then
+                        rb,c=rb..ta(_d(T(A,(tb-173)+1),T(n_,(tb-173)%#n_+1))),_a[17277]or zb(26377,17277,127435)
+                    elseif c>24876 then
+                        if uc>183 then
+                            c=_a[-21538]or zb(59342,-21538,32053)
+                            continue
+                        else
+                            c=_a[29066]or zb(63671,29066,12786)
+                            continue
+                        end
+                        c=_a[6641]or zb(55927,6641,109200)
+                    else
+                        if(uc>95)then
+                            c=_a[14833]or zb(14206,14833,5437)
+                            continue
+                        else
+                            c=_a[23170]or zb(26583,23170,6900)
+                            continue
+                        end
+                        c=_a[-8985]or zb(50214,-8985,101575)
+                    end
+                elseif c>20467 then
+                    if c<=21205 then
+                        if c<21098 then
+                            if c<=20821 then
+                                if not Wa[ra[57579]]then
+                                    c=_a[30491]or zb(51230,30491,25014)
+                                    continue
+                                end
+                                c=_a[-22874]or zb(6890,-22874,92939)
+                            else
+                                za[(rb-132)],c=ja[s_[52113]+1],_a[-30979]or zb(27517,-30979,116461)
+                            end
+                        elseif c<=21098 then
+                            Wb=n_
+                            if rb~=rb then
+                                c=_a[-9524]or zb(59629,-9524,21474)
+                            else
+                                c=_a[-24352]or zb(51574,-24352,5994)
+                            end
+                        else
+                            Za(n_,1,rb,Qa,Wa);
+                            c=_a[-30504]or zb(51690,-30504,112651)
+                        end
+                    elseif c>=21646 then
+                        if c<=21646 then
+                            Wa[ra[57579]],c=Wa[ra[35235]][Wa[ra[52113]]],_a[-13779]or zb(64560,-13779,115921)
+                        else
+                            wb+=1;
+                            c=_a[-23232]or zb(1631,-23232,85688)
+                        end
+                    else
+                        Qa,R,za=ra[57579],ra[35235],ra[11916];
+                        Nb=Wa[R];
+                        Wa[Qa+1]=Nb;
+                        Wa[Qa]=Nb[za];
+                        wb+=1;
+                        c=_a[-15577]or zb(19850,-15577,78955)
+                    end
+                elseif c>=18814 then
+                    if c>18916 then
+                        if c<=19752 then
+                            if uc>196 then
+                                c=_a[-14476]or zb(15799,-14476,12388)
+                                continue
+                            else
+                                c=_a[-30206]or zb(18190,-30206,130093)
+                                continue
+                            end
+                            c=_a[28270]or zb(51105,28270,101954)
+                        else
+                            if(n_>=0 and Nb>A)or((n_<0 or n_~=n_)and Nb<A)then
+                                c=_a[25939]or zb(47236,25939,2405)
+                            else
+                                c=_a[-21057]or zb(64003,-21057,5992)
+                            end
+                        end
+                    elseif c<=18888 then
+                        if c>18814 then
+                            wb+=ra[64467];
+                            c=_a[13367]or zb(35524,13367,129829)
+                        else
+                            Qa,R=ra[57579],ra[52113]-1
+                            if(R==-1)then
+                                c=_a[-27726]or zb(2811,-27726,10458)
+                                continue
+                            else
+                                c=_a[15396]or zb(60531,15396,21190)
+                                continue
+                            end
+                            c=_a[-21977]or zb(60315,-21977,22702)
+                        end
+                    else
+                        Nb,c=rb,_a[16829]or zb(43056,16829,125166)
+                        continue
+                    end
+                elseif c<18756 then
+                    if c<=18630 then
+                        c,R[57159]=_a[23168]or zb(54458,23168,25610),Nb
+                    else
+                        Qa,R=nil,_d(ra[36133],59508);
+                        Qa=if R<32768 then R else R-65536;
+                        za=Qa;
+                        Nb=la[za+1];
+                        A=Nb[61519];
+                        n_=ia(A);
+                        Wa[_d(ra[57579],110)]=Ca(Nb,n_);
+                        c,rb,s_,Wb=30680,105,(A)+104,1
+                    end
+                elseif c>18756 then
+                    if(uc>37)then
+                        c=_a[-32104]or zb(1546,-32104,5427)
+                        continue
+                    else
+                        c=_a[5730]or zb(16813,5730,118030)
+                        continue
+                    end
+                    c=_a[32149]or zb(786,32149,94707)
+                else
+                    if uc>177 then
+                        c=_a[30305]or zb(29379,30305,76064)
+                        continue
+                    else
+                        c=_a[-24010]or zb(29760,-24010,114056)
+                        continue
+                    end
+                    c=_a[28501]or zb(6280,28501,92521)
                 end
             end
         end
-        task.wait(ScanCooldown)
+        return function(...)
+            local f_,Gb,ec,Ub,Cc,Sa,Uc,fb,wc,Ha,_b;
+            fb,Sa={},function(ga,Qc,r_)
+                fb[Qc]=oa(r_,27839)-oa(ga,23386)
+                return fb[Qc]
+            end;
+            _b=fb[1300]or Sa(23478,1300,43950)
+            while _b~=15362 do
+                if _b<=47371 then
+                    if _b>41980 then
+                        if _b>43652 then
+                            _b,f_=fb[-2059]or Sa(13473,-2059,74144),Fb(f_)
+                        else
+                            _b=fb[6988]or Sa(22558,6988,21497)
+                            continue
+                        end
+                    elseif _b>38434 then
+                        Gb,Ha=oc[28871]+1,Cc.n-oc[28871];
+                        ec[13495]=Ha;
+                        Za(Cc,Gb,Gb+Ha-1,1,ec[41430]);
+                        _b=fb[-8377]or Sa(58812,-8377,88212)
+                    elseif _b<=30021 then
+                        Gb,Ha=jb(e_(Ta,Uc,oc[55109],oc[21358],ec))
+                        if(Gb[1])then
+                            _b=fb[3608]or Sa(55857,3608,97074)
+                            continue
+                        else
+                            _b=fb[4549]or Sa(42890,4549,111938)
+                            continue
+                        end
+                        _b=fb[-11178]or Sa(59847,-11178,78238)
+                    else
+                        return yc(Gb,2,Ha)
+                    end
+                elseif _b>56612 then
+                    f_,Ub=Gb[2],nil;
+                    wc=f_;
+                    Ub=Fb(wc)==i_('&\128I<\154\\','U\244;')
+                    if Ub==false then
+                        _b=fb[6562]or Sa(52050,6562,75180)
+                        continue
+                    end
+                    _b=fb[26219]or Sa(5912,26219,83417)
+                elseif _b<=50725 then
+                    Cc,Uc,ec=Kb(...),ia(oc[27225]),{[13495]=0,[41430]={}};
+                    Za(Cc,1,oc[28871],0,Uc)
+                    if oc[28871]<Cc.n then
+                        _b=fb[17013]or Sa(41862,17013,127079)
+                        continue
+                    end
+                    _b=fb[18277]or Sa(24803,18277,56385)
+                else
+                    return Dc(f_,0)
+                end
+            end
+        end
     end
+    return Ca(Da,hc)
 end)
+local fc;
+fc,xa={[0]=0},function()
+    fc[0]=fc[0]+1
+    return{[1]=fc[0],[3]=fc}
+end;
+cb=Gc
+return(function()
+    return cb(Pb(Q'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'),{})
+end)()(...)
