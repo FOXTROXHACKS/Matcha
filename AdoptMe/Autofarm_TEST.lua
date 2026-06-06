@@ -1,12 +1,12 @@
 --[[
-[+] Adopt Me AutoFarm GUI V1.3
-[+] [UPDATED] Replaced Truck with Event Boat logic.
-[+] [UPDATED] Replaced Buckets with Trash Bags minigame sequence.
-[+] [REMOVED] Bison checks and old water tank TPs.
-[+] [ADDED] New manual TPs (Event, Minigame, Boat, Trash Bag).
+[+] Adopt Me AutoFarm GUI V1.16
+[+] [FIXED] Trash Bag farming breaking early due to load latency. Added a tolerance system (emptyChecks).
+[+] [IMPROVED] Trash Bag detection now supports both BaseParts and Models.
+[+] [NEW] UI Notifications for Toggles & Buttons.
+[+] [NEW] Advanced Event Logging for Minigame Stages.
 ]]
 
-local textprint = "--- ADOPT ME AUTO-FARM V1.3 (Boat & Trash Bags Edition)" 
+local textprint = "--- ADOPT ME AUTO-FARM V1.16 (Matcha Absolute Clicks Edition)" 
 local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
@@ -20,11 +20,22 @@ local config = {
     Anti_AFK = false,
     Anti_AFK_Time = 60,
     
-    LOGS = false,
+    LOGS = true, 
     CoinLogs = false 
 }
 
--- Eventlog stuff
+-- Sistema de Notificaciones de Roblox
+local function notify(title, text)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = title;
+            Text = text;
+            Duration = 3;
+        })
+    end)
+end
+
+-- Sistema de EventLogs
 local function EventLog(msg, errr)
     if config.LOGS then
         if errr == 1 then
@@ -35,43 +46,60 @@ local function EventLog(msg, errr)
     end
 end
 
+-- Función para asegurar que el click se registre en el juego
+local function PerformSafeClick()
+    if mousemoveabs and mouse1click then
+        mousemoveabs(1423, 951) -- Movimiento inicial
+        task.wait(0.1)
+        mousemoveabs(1423, 952) -- Pequeño ajuste para simular "Hover"
+        task.wait(0.5)
+        mouse1click()           -- Primer click
+    end
+end
+
 UI.AddTab("AutoFarm", function(tab)
     local sec = tab:Section("Configuration", "Left")
     sec:Toggle("boat_toggle", "Boat Idle & Token Farm", config.Boat_AutoFarm, function(state)
         config.Boat_AutoFarm = state
+        notify("AutoFarm", "Boat Idle: " .. tostring(state))
     end)
     sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
         config.Token_AutoFarm = state
+        notify("AutoFarm", "Token AutoFarm: " .. tostring(state))
     end)
     sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Token_Cooldown = val / 100
     end)
     sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
         config.Beam_AutoFarm = state
+        notify("AutoFarm", "Beam AutoFarm: " .. tostring(state))
     end)
     sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Beam_Cooldown = val / 100
     end)
     sec:Toggle("trash_toggle", "Trash Bags AutoFarm", config.Trash_AutoFarm, function(state)
         config.Trash_AutoFarm = state
+        notify("AutoFarm", "Trash Minigame: " .. tostring(state))
     end)
     
     -- [ SECCIÓN MISC ]
     local secMisc = tab:Section("MISC", "Right")
     secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
         config.LOGS = state
+        notify("Settings", "Event Logs: " .. tostring(state))
     end)
     secMisc:Toggle("coin_logs_toggle", "Detailed Coin Logs", config.CoinLogs, function(state) 
         config.CoinLogs = state
     end)
     secMisc:Toggle("anti_afk_toggle", "Anti-AFK (Jump)", config.Anti_AFK, function(state)
         config.Anti_AFK = state
+        notify("Settings", "Anti-AFK: " .. tostring(state))
     end)
     secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 60, function(val)
         config.Anti_AFK_Time = val
     end)
 
-    -- [ BOTONES DE ACCIÓN RÁPIDA ACTUALIZADOS ]
+    -- [ BOTONES DE ACCIÓN RÁPIDA ]
     local secTP = tab:Section("Instant Actions & TPs", "Right")
     
     secTP:Button("TP to Event", function()
@@ -80,7 +108,7 @@ UI.AddTab("AutoFarm", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-353.7116, 32.7624, -1422.9288)
-            if notify then notify("[Manual TP]", "Teleported to Event!", 5) end
+            notify("Teleport", "Teleported to Event Area")
         end
     end)
 
@@ -90,7 +118,7 @@ UI.AddTab("AutoFarm", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-372.1794, 32.7624, -1424.9301)
-            if notify then notify("[Manual TP]", "Teleported to Minigame!", 5) end
+            notify("Teleport", "Teleported to Minigame Entrance")
         end
     end)
 
@@ -102,25 +130,7 @@ UI.AddTab("AutoFarm", function(tab)
             if boatTop and boatTop:IsA("BasePart") then
                 hrp.Velocity = Vector3.new(0, 0, 0)
                 hrp.Position = boatTop.Position
-                if notify then notify("[Manual TP]", "Teleported to Boat Top!", 5) end
-            else
-                if notify then notify("[Manual TP]", "Boat Top not found!", 5) end
-            end
-        end
-    end)
-    
-    secTP:Button("TP to Trash Bag", function()
-        local character = game.Players.LocalPlayer.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local trashFolder = workspace:FindFirstChild("Trash")
-            local trashBag = trashFolder and trashFolder:FindFirstChild("TrashBag")
-            if trashBag and trashBag:IsA("BasePart") then
-                hrp.Velocity = Vector3.new(0, 0, 0)
-                hrp.Position = trashBag.Position + Vector3.new(0, 1.5, 0)
-                if notify then notify("[Manual TP]", "Teleported to Trash Bag!", 5) end
-            else
-                if notify then notify("[Manual TP]", "No Trash Bags found in workspace.", 5) end
+                notify("Teleport", "Teleported to Boat")
             end
         end
     end)
@@ -144,6 +154,52 @@ function GetBoatTopInstance()
     return nil
 end
 
+function GetDivePart()
+    local interiors = workspace:FindFirstChild("Interiors")
+    local mainMap = interiors and interiors:FindFirstChild("MainMap!Default")
+    local event = mainMap and mainMap:FindFirstChild("Event")
+    local journeyPass = event and event:FindFirstChild("JourneyPass")
+    local journeyParts = journeyPass and journeyPass:FindFirstChild("JourneyParts")
+    local week2 = journeyParts and journeyParts:FindFirstChild("Week2")
+    local divePart = week2 and week2:FindFirstChild("DivePart")
+    
+    if divePart and divePart:IsA("BasePart") then
+        return divePart
+    end
+    return nil
+end
+
+function AreTrashMarkersPresent()
+    local interiors = workspace:FindFirstChild("Interiors")
+    local mainMap = interiors and interiors:FindFirstChild("MainMap!Default")
+    local event = mainMap and mainMap:FindFirstChild("Event")
+    local journeyPass = event and event:FindFirstChild("JourneyPass")
+    local journeyParts = journeyPass and journeyPass:FindFirstChild("JourneyParts")
+    local week2 = journeyParts and journeyParts:FindFirstChild("Week2")
+    local trashMarkersFolder = week2 and week2:FindFirstChild("TrashMarkers")
+    
+    if trashMarkersFolder then
+        for _, child in ipairs(trashMarkersFolder:GetChildren()) do
+            if child:IsA("BasePart") and child.Transparency < 1 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function GetLadderPart()
+    local interiors = workspace:FindFirstChild("Interiors")
+    local oceanMinigame = interiors and interiors:FindFirstChild("OceanMinigameInterior")
+    local ladder = oceanMinigame and oceanMinigame:FindFirstChild("Ladder")
+    local part = ladder and ladder:FindFirstChild("Part")
+    
+    if part and part:IsA("BasePart") then
+        return part
+    end
+    return nil
+end
+
 print(textprint)
 
 -- [ ANTI-AFK LOOP ]
@@ -158,7 +214,6 @@ task.spawn(function()
                     keypress(0x20)
                     task.wait(0.1)
                     keyrelease(0x20)
-                    EventLog("- AntiAFK: Jumped")
                 end
                 elapsed = 0
             end
@@ -168,55 +223,190 @@ task.spawn(function()
     end
 end)
 
+-- [ MAIN LOOP ]
 task.spawn(function()
     while true do
         if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Trash_AutoFarm and not config.Boat_AutoFarm then 
             task.wait(0.5) 
             continue 
         end
+        
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        
         if hrp then
             
--------------- [1] TRASH BAG SEQUENCE (REPLACES BUCKETS)
-            local trashFolder = workspace:FindFirstChild("Trash")
-            if config.Trash_AutoFarm and trashFolder then
-                local bags = {}
-                for _, child in ipairs(trashFolder:GetChildren()) do
-                    if child.Name == "TrashBag" and child:IsA("BasePart") then
-                        table.insert(bags, child)
-                    end
-                end
+            -------------- [1] SECUENCIA DIVE PART CON MOUSE (ACTIVADO POR TRASH MARKERS)
+            local isMinigameReady = AreTrashMarkersPresent()
 
-                if #bags > 0 then
-                    if config.CoinLogs then
-                        EventLog("Trash Bags detected! Starting cleanup sequence.")
-                    end
+            if config.Trash_AutoFarm and isMinigameReady then
+                local divePart = GetDivePart()
+                if divePart then
                     
-                    for _, bag in ipairs(bags) do
-                        if not config.Trash_AutoFarm then break end
-                        if bag and bag.Parent then
-                            local success, bagPos = pcall(function() return bag.Position end)
-                            if success and typeof(bagPos) == "Vector3" then
+                    EventLog("Trashmarkers appeared, teleporting to diving part minigame")
+                    
+                    -- =======================================================
+                    -- CICLO 1: FARMEAR BOLSAS Y MONEDAS
+                    -- =======================================================
+                    
+                    -- Entrar al minijuego
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                    hrp.Position = divePart.Position + Vector3.new(0, 1.5, 0)
+                    
+                    task.wait(1)
+                    PerformSafeClick() -- Click de entrada
 
-                                hrp.Velocity = Vector3.new(0, 0, 0)
-                                hrp.Position = bagPos + Vector3.new(0, 1.5, 0)
-                                task.wait(0.2)
-                                
-                                if keypress and keyrelease then
-                                    keypress(0x45)
-                                    task.wait(0.05)
-                                    keyrelease(0x45)
+                    task.wait(5) -- Esperar 5s adentro para asegurar que cargue
+
+                    local ladderPart = GetLadderPart()
+                    if ladderPart then
+                        EventLog("Ladder found, starting trash farm (Cycle 1)")
+                        
+                        -- Lógica de recolección de bolsas con TOLERANCIA
+                        local isFarmingBags = true
+                        local emptyChecks = 0
+
+                        while isFarmingBags do
+                            local trashFolder = workspace:FindFirstChild("Trash")
+                            
+                            -- Si la carpeta Trash tarda en cargar o no existe aún
+                            if not trashFolder then 
+                                emptyChecks = emptyChecks + 1
+                                if emptyChecks >= 15 then -- Espera hasta ~3 segundos
+                                    isFarmingBags = false
+                                    break 
                                 end
                                 task.wait(0.2)
+                                continue
+                            end
+
+                            local bags = {}
+                            for _, child in ipairs(trashFolder:GetChildren()) do
+                                if child.Name == "TrashBag" then
+                                    table.insert(bags, child)
+                                end
+                            end
+
+                            if #bags > 0 then
+                                emptyChecks = 0 -- Reseteamos contador porque encontramos bolsas
+                                for _, bag in ipairs(bags) do
+                                    if bag and bag.Parent then
+                                        -- Detectar si es Model o BasePart
+                                        local targetPos = nil
+                                        if bag:IsA("BasePart") then
+                                            targetPos = bag.Position
+                                        elseif bag:IsA("Model") then
+                                            local primary = bag.PrimaryPart or bag:FindFirstChildWhichIsA("BasePart")
+                                            if primary then targetPos = primary.Position end
+                                        end
+
+                                        if targetPos then
+                                            hrp.Velocity = Vector3.new(0, 0, 0)
+                                            hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                            task.wait(0.2)
+                                            
+                                            if keypress and keyrelease then
+                                                keypress(0x45)
+                                                task.wait(0.05)
+                                                keyrelease(0x45)
+                                            end
+                                            task.wait(0.2)
+                                        end
+                                    end
+                                end
+                            else
+                                -- Si la carpeta existe pero está vacía
+                                emptyChecks = emptyChecks + 1
+                                if emptyChecks >= 15 then -- Confirmamos 15 veces seguidas que ya no hay bolsas
+                                    isFarmingBags = false 
+                                end
+                            end
+                            task.wait(0.2)
+                        end
+
+                        EventLog("No bags found, waiting 12 seconds for coins")
+                        task.wait(12) -- Esperar monedas
+
+                        -- Recoger monedas
+                        local tokens = {}
+                        for _, child in ipairs(workspace:GetChildren()) do
+                            if child.Name == "TokenPickup" then
+                                local col = child:FindFirstChild("Collider") or child
+                                if col:IsA("BasePart") then table.insert(tokens, col) end
                             end
                         end
+
+                        if #tokens > 0 then
+                            EventLog("Collecting coins in minigame")
+                            for _, token in ipairs(tokens) do
+                                if token and token.Parent and token:IsA("BasePart") then
+                                    local successPos, targetPos = pcall(function() return token.Position end)
+                                    if successPos and typeof(targetPos) == "Vector3" then
+                                        hrp.Velocity = Vector3.new(0, -10, 0)
+                                        hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
+                                        task.wait(config.Token_Cooldown)
+                                    end
+                                end
+                            end
+                        end
+
+                        task.wait(5) -- Esperar después de las monedas
+                        EventLog("Minigame finished, teleporting to ladder to exit (Cycle 1)")
+
+                        -- Salida 1
+                        while true do
+                            local currentLadder = GetLadderPart()
+                            if not currentLadder then break end -- Salió exitosamente
+
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = currentLadder.Position + Vector3.new(0, 1.5, 0)
+                            
+                            task.wait(1)
+                            PerformSafeClick() -- Click de salida
+                            task.wait(2)
+                        end
                     end
-                    continue
+                    
+                    -- =======================================================
+                    -- CICLO 2: VOLVER A ENTRAR, ESPERAR 10s Y SALIR
+                    -- =======================================================
+                    
+                    EventLog("Cycle 1 complete. Teleporting to diving part for Cycle 2")
+                    task.wait(1) 
+                    
+                    local divePart2 = GetDivePart()
+                    if divePart2 then
+                        -- Entrar de nuevo
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                        hrp.Position = divePart2.Position + Vector3.new(0, 1.5, 0)
+                        
+                        task.wait(1)
+                        PerformSafeClick() -- Click de entrada
+                        
+                        EventLog("Ladder found, waiting 10 seconds (Cycle 2)")
+                        task.wait(10)
+                        
+                        EventLog("Minigame finished, teleporting to ladder to exit (Cycle 2)")
+                        -- Salida 2
+                        while true do
+                            local currentLadder2 = GetLadderPart()
+                            if not currentLadder2 then break end -- Salió exitosamente
+                            
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = currentLadder2.Position + Vector3.new(0, 1.5, 0)
+                            
+                            task.wait(1)
+                            PerformSafeClick() -- Click de salida
+                            task.wait(2)
+                        end
+                    end
+
+                    EventLog("Cycle 2 complete. Returning to Boat/Idle logic.")
+                    continue 
                 end
             end
             
--------------- [2] BOAT IDLE & TOKEN LOGIC (REPLACES TRUCK)
+            -------------- [2] BOAT IDLE & TOKEN LOGIC
             local boatTop = GetBoatTopInstance()
 
             if config.Boat_AutoFarm and boatTop then
@@ -233,7 +423,7 @@ task.spawn(function()
                 
                 if #tokens > 0 then
                     for _, token in ipairs(tokens) do
-                        if config.Trash_AutoFarm and workspace:FindFirstChild("Trash") and workspace.Trash:FindFirstChild("TrashBag") then break end
+                        if config.Trash_AutoFarm and AreTrashMarkersPresent() then break end 
                         
                         if not token or not token.Parent or not token:IsA("BasePart") then
                             continue
@@ -242,7 +432,6 @@ task.spawn(function()
                         if successPos and typeof(targetPos) == "Vector3" and hrp then
                             hrp.Velocity = Vector3.new(0, -10, 0) 
                             hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                            
                             task.wait(config.Token_Cooldown)
                         end
                     end
@@ -250,14 +439,15 @@ task.spawn(function()
                     local successBoat, bPos = pcall(function() return boatTop.Position end)
                     if successBoat and typeof(bPos) == "Vector3" and boatTop.Parent and hrp then
                         hrp.Velocity = Vector3.new(0, 0, 0)
-                        hrp.Position = bPos + Vector3.new(0, -0.5, 0) -- Un poco más alto para asegurar no caerse
+                        hrp.Position = bPos + Vector3.new(0, -0.5, 0)
                     end
                 end
                 
                 task.wait(0.05)
                 continue
             end
--------------- [3] GENERAL LIGHT BEAM & TOKEN FARM (SI EL BOTE ESTÁ APAGADO O NO EXISTE)
+
+            -------------- [3] GENERAL LIGHT BEAM & TOKEN FARM
             local currentTargets = {}
             local allChildren = workspace:GetChildren()
             
@@ -282,7 +472,7 @@ task.spawn(function()
             
             if #currentTargets > 0 then
                 for _, item in ipairs(currentTargets) do
-                    if config.Trash_AutoFarm and workspace:FindFirstChild("Trash") and workspace.Trash:FindFirstChild("TrashBag") then break end
+                    if config.Trash_AutoFarm and AreTrashMarkersPresent() then break end
                     
                     local target = item.Part
                     local itemType = item.Type
