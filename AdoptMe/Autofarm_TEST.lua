@@ -231,7 +231,6 @@ task.spawn(function()
             if config.Trash_AutoFarm and isMinigameReady then
                 local divePart = GetDivePart()
                 if divePart then
-                    
                     EventLog("Trashmarkers appeared, teleporting to diving part minigame")
                     
                     -- =======================================================
