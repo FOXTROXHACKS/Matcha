@@ -23,18 +23,6 @@ local config = {
     LOGS = true, 
     CoinLogs = false 
 }
-
--- Sistema de Notificaciones de Roblox
-local function notify(title, text)
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = title;
-            Text = text;
-            Duration = 3;
-        })
-    end)
-end
-
 -- Sistema de EventLogs
 local function EventLog(msg, errr)
     if config.LOGS then
@@ -57,43 +45,44 @@ local function PerformSafeClick()
     end
 end
 
-UI.AddTab("AutoFarm", function(tab)
+UI.AddTab("Event AF", function(tab)
     local sec = tab:Section("Configuration", "Left")
     sec:Toggle("boat_toggle", "Boat Idle & Token Farm", config.Boat_AutoFarm, function(state)
         config.Boat_AutoFarm = state
-        notify("AutoFarm", "Boat Idle: " .. tostring(state))
+        notify("[AutoFarm]", "Boat Idle: " .. tostring(state),2)
     end)
     sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
         config.Token_AutoFarm = state
-        notify("AutoFarm", "Token AutoFarm: " .. tostring(state))
+        notify("[AutoFarm]", "Token AutoFarm: " .. tostring(state),2)
     end)
     sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Token_Cooldown = val / 100
     end)
     sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
         config.Beam_AutoFarm = state
-        notify("AutoFarm", "Beam AutoFarm: " .. tostring(state))
+        notify("[AutoFarm]", "Beam AutoFarm: " .. tostring(state),2)
     end)
     sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Beam_Cooldown = val / 100
     end)
     sec:Toggle("trash_toggle", "Trash Bags AutoFarm", config.Trash_AutoFarm, function(state)
         config.Trash_AutoFarm = state
-        notify("AutoFarm", "Trash Minigame: " .. tostring(state))
+        notify("[AutoFarm]", "Trash Minigame: " .. tostring(state),2)
     end)
     
     -- [ SECCIÓN MISC ]
     local secMisc = tab:Section("MISC", "Right")
     secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
         config.LOGS = state
-        notify("Settings", "Event Logs: " .. tostring(state))
+        notify("Settings", "Event Logs: " .. tostring(state),2)
     end)
     secMisc:Toggle("coin_logs_toggle", "Detailed Coin Logs", config.CoinLogs, function(state) 
         config.CoinLogs = state
+        notify("Settings", "Coins Logs: " .. tostring(state),2)
     end)
     secMisc:Toggle("anti_afk_toggle", "Anti-AFK (Jump)", config.Anti_AFK, function(state)
         config.Anti_AFK = state
-        notify("Settings", "Anti-AFK: " .. tostring(state))
+        notify("Settings", "Anti-AFK: " .. tostring(state),2)
     end)
     secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 60, function(val)
         config.Anti_AFK_Time = val
@@ -108,7 +97,7 @@ UI.AddTab("AutoFarm", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-353.7116, 32.7624, -1422.9288)
-            notify("Teleport", "Teleported to Event Area")
+            notify("[Manual Teleport]", "Teleported to Event Area",2)
         end
     end)
 
@@ -118,7 +107,7 @@ UI.AddTab("AutoFarm", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-372.1794, 32.7624, -1424.9301)
-            notify("Teleport", "Teleported to Minigame Entrance")
+            notify("[Manual Teleport]", "Teleported to Minigame Entrance",2)
         end
     end)
 
@@ -130,7 +119,7 @@ UI.AddTab("AutoFarm", function(tab)
             if boatTop and boatTop:IsA("BasePart") then
                 hrp.Velocity = Vector3.new(0, 0, 0)
                 hrp.Position = boatTop.Position
-                notify("Teleport", "Teleported to Boat")
+                notify("[Manual Teleport]", "Teleported to Boat",2)
             end
         end
     end)
@@ -324,8 +313,8 @@ task.spawn(function()
                             task.wait(0.2)
                         end
 
-                        EventLog("No bags found, waiting 12 seconds for coins")
-                        task.wait(12) -- Esperar monedas
+                        EventLog("No bags found, waiting 10 seconds for coins")
+                        task.wait(10) -- Esperar monedas
 
                         -- Recoger monedas
                         local tokens = {}
@@ -350,7 +339,7 @@ task.spawn(function()
                             end
                         end
 
-                        task.wait(5) -- Esperar después de las monedas
+                        task.wait(2) -- Esperar después de las monedas
                         EventLog("Minigame finished, teleporting to ladder to exit (Cycle 1)")
 
                         -- Salida 1
@@ -383,9 +372,93 @@ task.spawn(function()
                         task.wait(1)
                         PerformSafeClick() -- Click de entrada
                         
-                        EventLog("Ladder found, waiting 10 seconds (Cycle 2)")
-                        task.wait(10)
-                        
+                        EventLog("Ladder found, waiting 5 seconds (Cycle 2)")
+                        task.wait(5)
+                        -- Lógica de recolección de bolsas con TOLERANCIA
+                        local isFarmingBags = true
+                        local emptyChecks = 0
+
+                        while isFarmingBags do
+                            local trashFolder = workspace:FindFirstChild("Trash")
+                            
+                            -- Si la carpeta Trash tarda en cargar o no existe aún
+                            if not trashFolder then 
+                                emptyChecks = emptyChecks + 1
+                                if emptyChecks >= 15 then -- Espera hasta ~3 segundos
+                                    isFarmingBags = false
+                                    break 
+                                end
+                                task.wait(0.2)
+                                continue
+                            end
+
+                            local bags = {}
+                            for _, child in ipairs(trashFolder:GetChildren()) do
+                                if child.Name == "TrashBag" then
+                                    table.insert(bags, child)
+                                end
+                            end
+
+                            if #bags > 0 then
+                                emptyChecks = 0 -- Reseteamos contador porque encontramos bolsas
+                                for _, bag in ipairs(bags) do
+                                    if bag and bag.Parent then
+                                        -- Detectar si es Model o BasePart
+                                        local targetPos = nil
+                                        if bag:IsA("BasePart") then
+                                            targetPos = bag.Position
+                                        elseif bag:IsA("Model") then
+                                            local primary = bag.PrimaryPart or bag:FindFirstChildWhichIsA("BasePart")
+                                            if primary then targetPos = primary.Position end
+                                        end
+
+                                        if targetPos then
+                                            hrp.Velocity = Vector3.new(0, 0, 0)
+                                            hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                            task.wait(0.2)
+                                            
+                                            if keypress and keyrelease then
+                                                keypress(0x45)
+                                                task.wait(0.05)
+                                                keyrelease(0x45)
+                                            end
+                                            task.wait(0.2)
+                                        end
+                                    end
+                                end
+                            else
+                                -- Si la carpeta existe pero está vacía
+                                emptyChecks = emptyChecks + 1
+                                if emptyChecks >= 15 then -- Confirmamos 15 veces seguidas que ya no hay bolsas
+                                    isFarmingBags = false 
+                                end
+                            end
+                            task.wait(0.2)
+                        end
+                        task.wait(2)
+                                                -- Recoger monedas
+                        local tokens = {}
+                        for _, child in ipairs(workspace:GetChildren()) do
+                            if child.Name == "TokenPickup" then
+                                local col = child:FindFirstChild("Collider") or child
+                                if col:IsA("BasePart") then table.insert(tokens, col) end
+                            end
+                        end
+
+                        if #tokens > 0 then
+                            EventLog("Collecting coins in minigame")
+                            for _, token in ipairs(tokens) do
+                                if token and token.Parent and token:IsA("BasePart") then
+                                    local successPos, targetPos = pcall(function() return token.Position end)
+                                    if successPos and typeof(targetPos) == "Vector3" then
+                                        hrp.Velocity = Vector3.new(0, -10, 0)
+                                        hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
+                                        task.wait(config.Token_Cooldown)
+                                    end
+                                end
+                            end
+                        end
+                        task.wait(5)
                         EventLog("Minigame finished, teleporting to ladder to exit (Cycle 2)")
                         -- Salida 2
                         while true do
