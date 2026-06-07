@@ -45,6 +45,37 @@ local function PerformSafeClick()
     end
 end
 
+--[[
+Abrir Inventario
+1284, 1483
+Regalos
+1069, 1260
+tp regalos
+1193, 1035
+]]
+local function Tp2Event()
+    if mousemoveabs and mouse1click then
+        mousemoveabs(1284, 1483) -- Movimiento Abrir Inventario
+        task.wait(0.1)
+        mousemoveabs(1284, 1482) -- Pequeño ajuste para simular "Hover"
+        task.wait(0.5)
+        mouse1click()           -- Primer click
+        task.wait(0.5)
+        mousemoveabs(1069, 1260) -- Movimiento Regalos
+        task.wait(0.1)
+        mousemoveabs(1069, 1261) -- Pequeño ajuste para simular "Hover"
+        task.wait(0.5)
+        mouse1click()
+        task.wait(0.5)
+        mousemoveabs(1193, 1035) -- Movimiento tp
+        task.wait(0.1)
+        mousemoveabs(1193, 1036) -- Pequeño ajuste para simular "Hover"
+        task.wait(0.5)
+        mouse1click()
+        PerformSafeClick()
+    end
+end
+
 UI.AddTab("Event AF", function(tab)
     local sec = tab:Section("Configuration", "Left")
     sec:Toggle("boat_toggle", "Boat Idle & Token Farm", config.Boat_AutoFarm, function(state)
