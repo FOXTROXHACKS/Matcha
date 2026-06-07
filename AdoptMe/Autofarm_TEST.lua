@@ -7,21 +7,20 @@
 
 local textprint = "--- ADOPT ME AUTO-FARM V1.18 (Matcha Absolute Clicks Edition)" 
 local config = {
-    Beam_AutoFarm = false,
-    Beam_Cooldown = 0.05,
-    
+    Boat_AutoFarm = true,
+    Trash_AutoFarm = true,
     Token_AutoFarm = true,
     Token_Cooldown = 0.05,
     
-    Boat_AutoFarm = true,
-    Trash_AutoFarm = true,
+    Beam_AutoFarm = false,
+    Beam_Cooldown = 0.05,
     
     Idle_TP = true, -- Nuevo toggle para activar/desactivar el TP al punto de descanso del evento
     
-    Anti_AFK = false,
+    Anti_AFK = true
     Anti_AFK_Time = 60,
     
-    LOGS = true, 
+    LOGS = false, 
     CoinLogs = false 
 }
 
@@ -74,17 +73,6 @@ local function Tp2Event()
         PerformSafeClick()
     end
 end
-
-local function notify(title, text, dur)
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = title;
-            Text = text;
-            Duration = dur or 3;
-        })
-    end)
-end
-
 UI.AddTab("Event AF", function(tab)
     local sec = tab:Section("Configuration", "Left")
     sec:Toggle("boat_toggle", "Boat Idle & Token Farm", config.Boat_AutoFarm, function(state)
@@ -247,6 +235,7 @@ task.spawn(function()
                     keypress(0x20)
                     task.wait(0.1)
                     keyrelease(0x20)
+                    EventLog("Anti-AFK")
                 end
                 elapsed = 0
             end
