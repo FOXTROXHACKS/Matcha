@@ -1,9 +1,8 @@
 --[[
-[+] Adopt Me AutoFarm GUI V1.3.2
+[+] Adopt Me AutoFarm GUI V1.3.3
 [+] [FIXED] Minigame Cycle 2: Now waits exactly 5s and collects leftover coins.
 [+] [REWORKED] Token & Beam Farm: Items are now teleported TO THE PLAYER (Magnet) instead of moving the player.
 [+] [ADDED] Toggle for Event Idle TP to prevent automatic grounding when targets are clear.
-[+] [CLEANED] Removed unnecessary Roblox SetCore notification function.
 ]]
 
 local textprint = "--- ADOPT ME AUTO-FARM V1.18 (Matcha Absolute Clicks Edition)" 
