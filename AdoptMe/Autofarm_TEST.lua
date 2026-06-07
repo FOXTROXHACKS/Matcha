@@ -322,14 +322,14 @@ task.spawn(function()
                                         if targetPos then
                                             hrp.Velocity = Vector3.new(0, 0, 0)
                                             hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                            task.wait(0.2)
+                                            task.wait(0.1)
                                             
                                             if keypress and keyrelease then
                                                 keypress(0x45)
-                                                task.wait(0.05)
+                                                task.wait(0.02)
                                                 keyrelease(0x45)
                                             end
-                                            task.wait(0.2)
+                                            task.wait(0.1)
                                         end
                                     end
                                 end
@@ -402,8 +402,8 @@ task.spawn(function()
                         task.wait(1)
                         PerformSafeClick() -- Click de entrada
                         
-                        EventLog("Ladder found, waiting 5 seconds (Cycle 2)")
-                        task.wait(5)
+                        EventLog("Ladder found, waiting 2 seconds (Cycle 2)")
+                        task.wait(2)
                         -- Lógica de recolección de bolsas con TOLERANCIA
                         local isFarmingBags = true
                         local emptyChecks = 0
@@ -445,14 +445,14 @@ task.spawn(function()
                                         if targetPos then
                                             hrp.Velocity = Vector3.new(0, 0, 0)
                                             hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                            task.wait(0.2)
+                                            task.wait(0.1)
                                             
                                             if keypress and keyrelease then
                                                 keypress(0x45)
-                                                task.wait(0.05)
+                                                task.wait(0.03)
                                                 keyrelease(0x45)
                                             end
-                                            task.wait(0.2)
+                                            task.wait(0.1)
                                         end
                                     end
                                 end
@@ -488,7 +488,7 @@ task.spawn(function()
                                 end
                             end
                         end
-                        task.wait(5)
+                        task.wait(2)
                         EventLog("Minigame finished, teleporting to ladder to exit (Cycle 2)")
                         -- Salida 2
                         while true do
