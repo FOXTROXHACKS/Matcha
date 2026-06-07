@@ -1,13 +1,13 @@
 --[[
-[+] Adopt Me AutoFarm GUI V1.3.1
+[+] Adopt Me AutoFarm GUI V1.3.2
 [+] [FIXED] Minigame Cycle 2: Added full bag and coin farming logic.
 [+] [CHANGED] Cycle 2 token wait time reduced from 10s to 5s.
 [+] [ADDED] Toggle for Event Idle TP to prevent automatic grounding when targets are clear.
 [+] [FIXED] Added Auto TP Event Toggle to prevent constant UI teleports.
-[+] [FIXED] Added Anti-Stuck logic for bugged/leftover tokens.
+[+] [FIXED] No coins should be left behind now..
 ]]
 
-local textprint = "--- ADOPT ME AUTO-FARM V1.3.1 (Matcha Absolute Clicks Edition)" 
+local textprint = "--- ADOPT ME AUTO-FARM V1.3.2 (Double Check Tokens)" 
 local config = {
     Boat_AutoFarm = true,
     Trash_AutoFarm = true,
@@ -340,28 +340,31 @@ task.spawn(function()
                 end
 
                 -- MONEDAS
+                -- MONEDAS (scan continuo, re-escanea tras cada recolección)
                 if GetLadderPart() then
-                    EventLog("Waiting 10 seconds for coins...")
-                    task.wait(10) 
-                    local tokens = {}
-                    for _, child in ipairs(workspace:GetChildren()) do
-                        if child.Name == "TokenPickup" then
-                            local col = child:FindFirstChild("Collider") or child
-                            if col:IsA("BasePart") then table.insert(tokens, col) end
-                        end
-                    end
+                    EventLog("Waiting 10 seconds for coins...") -- (o 5s en Ciclo 2)
+                    task.wait(10) -- (o 5 en Ciclo 2)
 
-                    if #tokens > 0 then
-                        EventLog("Collecting coins in minigame")
-                        for _, token in ipairs(tokens) do
-                            if token and token.Parent and token:IsA("BasePart") then
-                                local successPos, targetPos = pcall(function() return token.Position end)
-                                if successPos and typeof(targetPos) == "Vector3" then
-                                    hrp.Velocity = Vector3.new(0, -10, 0)
-                                    hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                    task.wait(config.Token_Cooldown)
+                    local coinScanActive = true
+                    while coinScanActive and GetLadderPart() do
+                        local found = false
+                        for _, child in ipairs(workspace:GetChildren()) do
+                            if child.Name == "TokenPickup" then
+                                local col = child:FindFirstChild("Collider") or child
+                                if col and col:IsA("BasePart") and col.Parent then
+                                    local ok, pos = pcall(function() return col.Position end)
+                                    if ok and typeof(pos) == "Vector3" then
+                                        hrp.Velocity = Vector3.new(0, -10, 0)
+                                        hrp.Position = pos + Vector3.new(0, 2.5, 0)
+                                        task.wait(config.Token_Cooldown)
+                                        found = true
+                                        break -- rompe el for, re-escanea desde cero
+                                    end
                                 end
                             end
+                        end
+                        if not found then
+                            coinScanActive = false -- no quedaron monedas
                         end
                     end
                     task.wait(2)
@@ -451,25 +454,25 @@ task.spawn(function()
                     if GetLadderPart() then
                         EventLog("Cycle 1: Bags collected. Waiting 10s for coins.")
                         task.wait(10)
-                        local tokens = {}
-                        for _, child in ipairs(workspace:GetChildren()) do
-                            if child.Name == "TokenPickup" then
-                                local col = child:FindFirstChild("Collider") or child
-                                if col:IsA("BasePart") then table.insert(tokens, col) end
-                            end
-                        end
-
-                        if #tokens > 0 then
-                            for _, token in ipairs(tokens) do
-                                if token and token.Parent and token:IsA("BasePart") then
-                                    local successPos, targetPos = pcall(function() return token.Position end)
-                                    if successPos and typeof(targetPos) == "Vector3" then
-                                        hrp.Velocity = Vector3.new(0, -10, 0)
-                                        hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                        task.wait(config.Token_Cooldown)
+                        local coinScanActive = true
+                        while coinScanActive and GetLadderPart() do
+                            local found = false
+                            for _, child in ipairs(workspace:GetChildren()) do
+                                if child.Name == "TokenPickup" then
+                                    local col = child:FindFirstChild("Collider") or child
+                                    if col and col:IsA("BasePart") and col.Parent then
+                                        local ok, pos = pcall(function() return col.Position end)
+                                        if ok and typeof(pos) == "Vector3" then
+                                            hrp.Velocity = Vector3.new(0, -10, 0)
+                                            hrp.Position = pos + Vector3.new(0, 2.5, 0)
+                                            task.wait(config.Token_Cooldown)
+                                            found = true
+                                            break
+                                        end
                                     end
                                 end
                             end
+                            if not found then coinScanActive = false end
                         end
                         task.wait(2)
                     end
@@ -556,27 +559,26 @@ task.spawn(function()
                         -- MONEDAS CICLO 2 (Espera reducida a 5 segundos)
                         if GetLadderPart() then
                             EventLog("Cycle 2: Bags checked. Waiting 5s for coins.")
-                            task.wait(5) 
-                            local tokens = {}
-                            for _, child in ipairs(workspace:GetChildren()) do
-                                if child.Name == "TokenPickup" then
-                                    local col = child:FindFirstChild("Collider") or child
-                                    if col:IsA("BasePart") then table.insert(tokens, col) end
-                                end
-                            end
-
-                            if #tokens > 0 then
-                                EventLog("Collecting coins in minigame (Cycle 2)")
-                                for _, token in ipairs(tokens) do
-                                    if token and token.Parent and token:IsA("BasePart") then
-                                        local successPos, targetPos = pcall(function() return token.Position end)
-                                        if successPos and typeof(targetPos) == "Vector3" then
-                                            hrp.Velocity = Vector3.new(0, -10, 0)
-                                            hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                            task.wait(config.Token_Cooldown)
+                            task.wait(5)
+                            local coinScanActive = true
+                            while coinScanActive and GetLadderPart() do
+                                local found = false
+                                for _, child in ipairs(workspace:GetChildren()) do
+                                    if child.Name == "TokenPickup" then
+                                        local col = child:FindFirstChild("Collider") or child
+                                        if col and col:IsA("BasePart") and col.Parent then
+                                            local ok, pos = pcall(function() return col.Position end)
+                                            if ok and typeof(pos) == "Vector3" then
+                                                hrp.Velocity = Vector3.new(0, -10, 0)
+                                                hrp.Position = pos + Vector3.new(0, 2.5, 0)
+                                                task.wait(config.Token_Cooldown)
+                                                found = true
+                                                break
+                                            end
                                         end
                                     end
                                 end
+                                if not found then coinScanActive = false end
                             end
                             task.wait(2)
                         end
