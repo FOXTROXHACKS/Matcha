@@ -3,7 +3,6 @@
 [+] [FIXED] Minigame Cycle 2: Added full bag and coin farming logic.
 [+] [CHANGED] Cycle 2 token wait time reduced from 10s to 5s.
 [+] [ADDED] Toggle for Event Idle TP to prevent automatic grounding when targets are clear.
-[+] [FIXED] Removed unnecessary notifications.
 [+] [FIXED] Added Auto TP Event Toggle to prevent constant UI teleports.
 [+] [FIXED] Added Anti-Stuck logic for bugged/leftover tokens.
 ]]
