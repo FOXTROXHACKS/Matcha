@@ -1,11 +1,9 @@
 --[[
-[+] Adopt Me AutoFarm GUI V1.3.1
-[+] [FIXED] Minigame Cycle 2: Added full bag and coin farming logic.
-[+] [CHANGED] Cycle 2 token wait time reduced from 10s to 5s.
+[+] Adopt Me AutoFarm GUI V1.3.2
+[+] [FIXED] Minigame Cycle 2: Now waits exactly 5s and collects leftover coins.
+[+] [REWORKED] Token & Beam Farm: Items are now teleported TO THE PLAYER (Magnet) instead of moving the player.
 [+] [ADDED] Toggle for Event Idle TP to prevent automatic grounding when targets are clear.
-[+] [FIXED] Removed unnecessary notifications.
-[+] [FIXED] Added Auto TP Event Toggle to prevent constant UI teleports.
-[+] [FIXED] Added Anti-Stuck logic for bugged/leftover tokens.
+[+] [CLEANED] Removed unnecessary Roblox SetCore notification function.
 ]]
 
 local textprint = "--- ADOPT ME AUTO-FARM V1.18 (Matcha Absolute Clicks Edition)" 
@@ -18,19 +16,14 @@ local config = {
     Beam_AutoFarm = false,
     Beam_Cooldown = 0.05,
     
-    Idle_TP = true, 
-    Auto_TP_Event = false, -- Nuevo toggle para evitar TPs constantes mediante la UI
+    Idle_TP = true, -- Toggle para activar/desactivar el TP al punto de descanso del evento
     
-    Anti_AFK = true, -- Corregida la coma faltante aquí
+    Anti_AFK = true, -- Coma corregida
     Anti_AFK_Time = 60,
     
     LOGS = false, 
     CoinLogs = false 
 }
-
--- Tablas para ignorar tokens bugeados o inalcanzables (evita que el bote se quede AFK atrapado)
-local stuckTokens = setmetatable({}, {__mode = "k"})
-local tokenAttempts = setmetatable({}, {__mode = "k"})
 
 -- Sistema de EventLogs
 local function EventLog(msg, errr)
@@ -86,24 +79,26 @@ UI.AddTab("Event AF", function(tab)
     local sec = tab:Section("Configuration", "Left")
     sec:Toggle("boat_toggle", "Boat Idle & Token Farm", config.Boat_AutoFarm, function(state)
         config.Boat_AutoFarm = state
+        notify("[AutoFarm]", "Boat Idle: " .. tostring(state), 2)
     end)
     sec:Toggle("trash_toggle", "Trash Bags Minigame AutoFarm", config.Trash_AutoFarm, function(state)
         config.Trash_AutoFarm = state
+        notify("[AutoFarm]", "Trash Minigame: " .. tostring(state), 2)
     end)
     sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
         config.Token_AutoFarm = state
+        notify("[AutoFarm]", "Token AutoFarm: " .. tostring(state), 2)
     end)
     sec:Toggle("idle_tp_toggle", "TP to Event Idle Point", config.Idle_TP, function(state)
         config.Idle_TP = state
-    end)
-    sec:Toggle("auto_tp_event", "Auto UI TP to Event", config.Auto_TP_Event, function(state)
-        config.Auto_TP_Event = state
+        notify("[AutoFarm]", "Idle TP: " .. tostring(state), 2)
     end)
     sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Token_Cooldown = val / 100
     end)
     sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
         config.Beam_AutoFarm = state
+        notify("[AutoFarm]", "Beam AutoFarm: " .. tostring(state), 2)
     end)
     sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Beam_Cooldown = val / 100
@@ -113,12 +108,15 @@ UI.AddTab("Event AF", function(tab)
     local secMisc = tab:Section("MISC", "Right")
     secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
         config.LOGS = state
+        notify("Settings", "Event Logs: " .. tostring(state), 2)
     end)
     secMisc:Toggle("coin_logs_toggle", "Detailed Coin Logs", config.CoinLogs, function(state) 
         config.CoinLogs = state
+        notify("Settings", "Coins Logs: " .. tostring(state), 2)
     end)
     secMisc:Toggle("anti_afk_toggle", "Anti-AFK (Jump)", config.Anti_AFK, function(state)
         config.Anti_AFK = state
+        notify("Settings", "Anti-AFK: " .. tostring(state), 2)
     end)
     secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 60, function(val)
         config.Anti_AFK_Time = val
@@ -133,6 +131,7 @@ UI.AddTab("Event AF", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-353.7116, 32.7624, -1422.9288)
+            notify("[Manual Teleport]", "Teleported to Event Area", 2)
         end
     end)
 
@@ -142,6 +141,7 @@ UI.AddTab("Event AF", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-372.1794, 32.7624, -1424.9301)
+            notify("[Manual Teleport]", "Teleported to Minigame Entrance", 2)
         end
     end)
 
@@ -153,6 +153,7 @@ UI.AddTab("Event AF", function(tab)
             if boatTop and boatTop:IsA("BasePart") then
                 hrp.Velocity = Vector3.new(0, 0, 0)
                 hrp.Position = boatTop.Position
+                notify("[Manual Teleport]", "Teleported to Boat", 2)
             end
         end
     end)
@@ -328,7 +329,7 @@ task.spawn(function()
                     task.wait(0.2)
                 end
 
-                -- MONEDAS
+                -- MONEDAS (SUCCIÓN AL JUGADOR)
                 if GetLadderPart() then
                     EventLog("Waiting 10 seconds for coins...")
                     task.wait(10) 
@@ -341,17 +342,13 @@ task.spawn(function()
                     end
 
                     if #tokens > 0 then
-                        EventLog("Collecting coins in minigame")
+                        EventLog("Bringing coins to player in minigame")
                         for _, token in ipairs(tokens) do
                             if token and token.Parent and token:IsA("BasePart") then
-                                local successPos, targetPos = pcall(function() return token.Position end)
-                                if successPos and typeof(targetPos) == "Vector3" then
-                                    hrp.Velocity = Vector3.new(0, -10, 0)
-                                    hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                    task.wait(config.Token_Cooldown)
-                                end
+                                token.CFrame = hrp.CFrame
                             end
                         end
+                        task.wait(0.5)
                     end
                     task.wait(2)
                 end
@@ -449,16 +446,13 @@ task.spawn(function()
                         end
 
                         if #tokens > 0 then
+                            EventLog("Cycle 1: Bringing coins to player")
                             for _, token in ipairs(tokens) do
                                 if token and token.Parent and token:IsA("BasePart") then
-                                    local successPos, targetPos = pcall(function() return token.Position end)
-                                    if successPos and typeof(targetPos) == "Vector3" then
-                                        hrp.Velocity = Vector3.new(0, -10, 0)
-                                        hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                        task.wait(config.Token_Cooldown)
-                                    end
+                                    token.CFrame = hrp.CFrame
                                 end
                             end
+                            task.wait(0.5)
                         end
                         task.wait(2)
                     end
@@ -492,60 +486,11 @@ task.spawn(function()
                     end
 
                     if GetLadderPart() then
-                        EventLog("Cycle 2: Inside successfully. Starting farm routine.")
-                        task.wait(2)
+                        EventLog("Cycle 2: Inside successfully. Waiting 5s for coins.")
+                        task.wait(5)
 
-                        -- BOLSAS CICLO 2
-                        local isFarmingBags2 = true
-                        local emptyChecks2 = 0
-                        while isFarmingBags2 and GetLadderPart() do
-                            local trashFolder = workspace:FindFirstChild("Trash")
-                            if not trashFolder then 
-                                emptyChecks2 = emptyChecks2 + 1
-                                if emptyChecks2 >= 15 then isFarmingBags2 = false; break end
-                                task.wait(0.2); continue
-                            end
-
-                            local bags = {}
-                            for _, child in ipairs(trashFolder:GetChildren()) do
-                                if child.Name == "TrashBag" then table.insert(bags, child) end
-                            end
-
-                            if #bags > 0 then
-                                emptyChecks2 = 0 
-                                for _, bag in ipairs(bags) do
-                                    if bag and bag.Parent then
-                                        local targetPos = nil
-                                        if bag:IsA("BasePart") then targetPos = bag.Position
-                                        elseif bag:IsA("Model") then
-                                            local primary = bag.PrimaryPart or bag:FindFirstChildWhichIsA("BasePart")
-                                            if primary then targetPos = primary.Position end
-                                        end
-
-                                        if targetPos then
-                                            hrp.Velocity = Vector3.new(0, 0, 0)
-                                            hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                            task.wait(0.1)
-                                            if keypress and keyrelease then
-                                                keypress(0x45)
-                                                task.wait(0.02)
-                                                keyrelease(0x45)
-                                            end
-                                            task.wait(0.1)
-                                        end
-                                    end
-                                end
-                            else
-                                emptyChecks2 = emptyChecks2 + 1
-                                if emptyChecks2 >= 15 then isFarmingBags2 = false end
-                            end
-                            task.wait(0.2)
-                        end
-
-                        -- MONEDAS CICLO 2 (Espera reducida a 5 segundos)
+                        -- MONEDAS CICLO 2 (Recolección rápida por succión)
                         if GetLadderPart() then
-                            EventLog("Cycle 2: Bags checked. Waiting 5s for coins.")
-                            task.wait(5) 
                             local tokens = {}
                             for _, child in ipairs(workspace:GetChildren()) do
                                 if child.Name == "TokenPickup" then
@@ -555,17 +500,13 @@ task.spawn(function()
                             end
 
                             if #tokens > 0 then
-                                EventLog("Collecting coins in minigame (Cycle 2)")
+                                EventLog("Cycle 2: Bringing leftover coins to player")
                                 for _, token in ipairs(tokens) do
                                     if token and token.Parent and token:IsA("BasePart") then
-                                        local successPos, targetPos = pcall(function() return token.Position end)
-                                        if successPos and typeof(targetPos) == "Vector3" then
-                                            hrp.Velocity = Vector3.new(0, -10, 0)
-                                            hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                            task.wait(config.Token_Cooldown)
-                                        end
+                                        token.CFrame = hrp.CFrame
                                     end
                                 end
+                                task.wait(0.5)
                             end
                             task.wait(2)
                         end
@@ -600,10 +541,7 @@ task.spawn(function()
                         end
                     elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
                         local col = child:FindFirstChild("Collider") or child
-                        -- Usamos el ParentObj (child) para trackear si el token está atascado
-                        if col:IsA("BasePart") and not stuckTokens[child] then 
-                            table.insert(currentTargets, {Part = col, Type = "Token", ParentObj = child}) 
-                        end
+                        if col:IsA("BasePart") then table.insert(currentTargets, {Part = col, Type = "Token"}) end
                     end
                 end
                 
@@ -613,28 +551,11 @@ task.spawn(function()
                         
                         local target = item.Part
                         if target and target.Parent and target:IsA("BasePart") then
-                            local successPos, targetPos = pcall(function() return target.Position end)
-                            if successPos and typeof(targetPos) == "Vector3" then
-                                if item.Type == "Token" then
-                                    
-                                    -- Lógica Anti-Stuck para Tokens
-                                    tokenAttempts[item.ParentObj] = (tokenAttempts[item.ParentObj] or 0) + 1
-                                    if tokenAttempts[item.ParentObj] > 10 then
-                                        stuckTokens[item.ParentObj] = true
-                                        EventLog("Ignored token (stuck/unreachable).")
-                                    end
-                                    
-                                    hrp.Velocity = Vector3.new(0, -10, 0) 
-                                    hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                    task.wait(config.Token_Cooldown)
-                                elseif item.Type == "Beam" then
-                                    hrp.Velocity = Vector3.new(0, 0, 0)
-                                    hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                    task.wait(config.Beam_Cooldown)
-                                end
-                            end
+                            -- Usamos el CFrame Magnet que descubriste para Token y Beams!
+                            target.CFrame = hrp.CFrame
                         end
                     end
+                    task.wait(config.Token_Cooldown)
                 else
                     -- ANCLAJES DE DESCANSO
                     if boatTop and config.Boat_AutoFarm then
@@ -651,13 +572,9 @@ task.spawn(function()
             end
 
             -- [ESTADO 5] ESTAMOS EN EL MAIN MAP U OTRA ZONA (No Boat, No Dive, No Ladder)
-            if config.Auto_TP_Event then
-                EventLog("Event Map not detected. Attempting UI navigation to Event...")
-                Tp2Event()
-                task.wait(3)
-            else
-                task.wait(1)
-            end 
+            EventLog("Event Map not detected. Attempting UI navigation to Event...")
+            Tp2Event()
+            task.wait(3) 
         end
         task.wait(ScanCooldown)
     end
