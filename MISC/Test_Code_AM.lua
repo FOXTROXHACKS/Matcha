@@ -1,37 +1,43 @@
 --[[
-[+] Adopt Me AutoFarm GUI V1.3.2
-[+] [FIXED] Minigame Cycle 2: Added full bag and coin farming logic.
-[+] [CHANGED] Cycle 2 token wait time reduced from 10s to 5s.
-[+] [ADDED] Toggle for Event Idle TP to prevent automatic grounding when targets are clear.
-[+] [FIXED] Added Auto TP Event Toggle to prevent constant UI teleports.
-[+] [FIXED] No coins should be left behind now..
+[+] Adopt Me AutoFarm GUI V1.3.6
++ Added Dropped Items AutoFarm (AdminAbuseItem + AdminAbuseBucks magnet loop)
++ Added Collect All Tokens button
++ Added Collect All Dropped Items button
++ Added Toggle for Event Idle TP (prevents automatic grounding when targets are clear)
++ Added Auto TP Event Toggle (prevents constant UI teleports)
+
++ Fixed Cycle being interrupted by by Boat
++ Added Minigame Cycle 2
++ Fixed issue where coins could be left behind
+
+- Reduced Cycle 2 token wait time from 10s to 5s
 ]]
 
-local textprint = "--- ADOPT ME AUTO-FARM V1.3.2 (Double Check Tokens)" 
+local textprint = "--- ADOPT ME AUTO-FARM V1.3.6 (Stable + Boat Fix)"
 local config = {
     Boat_AutoFarm = true,
     Trash_AutoFarm = true,
     Token_AutoFarm = true,
     Token_Cooldown = 0.05,
-    
-    Beam_AutoFarm = false,
-    Beam_Cooldown = 0.05,
-    
-    Idle_TP = true, 
-    Auto_TP_Event = false, -- Nuevo toggle para evitar TPs constantes mediante la UI
-    
-    Anti_AFK = true, -- Corregida la coma faltante aquí
+
+    Dropped_Items_AutoFarm = false,
+    Drop_Cooldown = 0.05,
+
+    Idle_TP = true,
+    Auto_TP_Event = false,
+
+    Anti_AFK = true,
     Anti_AFK_Time = 60,
-    
-    LOGS = true, 
-    CoinLogs = false 
+
+    LOGS = true,
+    CoinLogs = false
 }
 
--- Tablas para ignorar tokens bugeados o inalcanzables (evita que el bote se quede AFK atrapado)
 local stuckTokens = setmetatable({}, {__mode = "k"})
 local tokenAttempts = setmetatable({}, {__mode = "k"})
+local cycleInterrupted = false
+local wasEjectedFromCycle1 = false
 
--- Sistema de EventLogs
 local function EventLog(msg, errr)
     if config.LOGS then
         if errr == 1 then
@@ -42,39 +48,33 @@ local function EventLog(msg, errr)
     end
 end
 
--- Función para asegurar que el click se registre en el juego
 local function PerformSafeClick()
     if mousemoveabs and mouse1click then
-        mousemoveabs(1423, 951) -- Movimiento inicial
+        mousemoveabs(1423, 951)
         task.wait(0.1)
-        mousemoveabs(1423, 952) -- Pequeño ajuste para simular "Hover"
+        mousemoveabs(1423, 952)
         task.wait(0.5)
-        mouse1click()           -- Primer click
+        mouse1click()
     end
 end
 
---[[
-Abrir Inventario: 1284, 1483
-Regalos: 1069, 1260
-tp regalos: 1193, 1035
-]]
 local function Tp2Event()
     if mousemoveabs and mouse1click then
-        mousemoveabs(1284, 1483) -- Movimiento Abrir Inventario
+        mousemoveabs(1284, 1483)
         task.wait(0.1)
-        mousemoveabs(1284, 1482) -- Pequeño ajuste para simular "Hover"
-        task.wait(0.5)
-        mouse1click()           -- Primer click
-        task.wait(0.5)
-        mousemoveabs(1069, 1260) -- Movimiento Regalos
-        task.wait(0.1)
-        mousemoveabs(1069, 1261) -- Pequeño ajuste
+        mousemoveabs(1284, 1482)
         task.wait(0.5)
         mouse1click()
         task.wait(0.5)
-        mousemoveabs(1193, 1035) -- Movimiento tp
+        mousemoveabs(1069, 1260)
         task.wait(0.1)
-        mousemoveabs(1193, 1036) -- Pequeño ajuste
+        mousemoveabs(1069, 1261)
+        task.wait(0.5)
+        mouse1click()
+        task.wait(0.5)
+        mousemoveabs(1193, 1035)
+        task.wait(0.1)
+        mousemoveabs(1193, 1036)
         task.wait(0.5)
         mouse1click()
         PerformSafeClick()
@@ -106,21 +106,20 @@ UI.AddTab("Event AF", function(tab)
     sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 5, function(val)
         config.Token_Cooldown = val / 100
     end)
-    sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
-        config.Beam_AutoFarm = state
-        notify("[AutoFarm]", "Beam AF: " .. tostring(state), 2)
+    sec:Toggle("dropped_items_toggle", "Collect Dropped Items", config.Dropped_Items_AutoFarm, function(state)
+        config.Dropped_Items_AutoFarm = state
+        notify("[AutoFarm]", "Dropped Items: " .. tostring(state), 2)
     end)
-    sec:SliderInt("beam_cooldown", "Beam TP Cooldown (ms)", 1, 100, 5, function(val)
-        config.Beam_Cooldown = val / 100
+    sec:SliderInt("drop_cooldown", "Dropped Items Cooldown (ms)", 1, 100, 5, function(val)
+        config.Drop_Cooldown = val / 100
     end)
-    
-    -- [ SECCIÓN MISC ]
+
     local secMisc = tab:Section("MISC", "Right")
     secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
         config.LOGS = state
         notify("[MISC]", "Logs: " .. tostring(state), 2)
     end)
-    secMisc:Toggle("coin_logs_toggle", "Detailed Coin Logs", config.CoinLogs, function(state) 
+    secMisc:Toggle("coin_logs_toggle", "Detailed Coin Logs", config.CoinLogs, function(state)
         config.CoinLogs = state
         notify("[MISC]", "Coin Logs: " .. tostring(state), 2)
     end)
@@ -132,17 +131,16 @@ UI.AddTab("Event AF", function(tab)
         config.Anti_AFK_Time = val
     end)
 
-    -- [ BOTONES DE ACCIÓN RÁPIDA ]
     local secTP = tab:Section("Instant Actions & TPs", "Right")
-    
+
     secTP:Button("TP to Event", function()
         local character = game.Players.LocalPlayer.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-353.7116, 32.7624, -1422.9288)
+            notify("[MANUAL TP]", "Teleported to Event", 2)
         end
-        notify("[MANUAL TP]", "EVENT: " .. tostring(state), 2)
     end)
 
     secTP:Button("TP to Minigame", function()
@@ -151,8 +149,8 @@ UI.AddTab("Event AF", function(tab)
         if hrp then
             hrp.Velocity = Vector3.new(0, 0, 0)
             hrp.Position = Vector3.new(-372.1794, 32.7624, -1424.9301)
+            notify("[MANUAL TP]", "Teleported to Minigame", 2)
         end
-        notify("[MANUAL TP]", "Minigame TP: " .. tostring(state), 2)
     end)
 
     secTP:Button("TP to Boat", function()
@@ -163,13 +161,50 @@ UI.AddTab("Event AF", function(tab)
             if boatTop and boatTop:IsA("BasePart") then
                 hrp.Velocity = Vector3.new(0, 0, 0)
                 hrp.Position = boatTop.Position
+                notify("[MANUAL TP]", "Teleported to Boat", 2)
             end
-            notify("[MANUAL TP]", "Boat: " .. tostring(state), 2)
+        end
+    end)
+
+    secTP:Button("Collect All Tokens", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for _, child in ipairs(workspace:GetChildren()) do
+                if child.Name == "TokenPickup" then
+                    local col = child:FindFirstChild("Collider") or child
+                    if col and col:IsA("BasePart") and col.Parent then
+                        col.CFrame = hrp.CFrame
+                    end
+                end
+            end
+            notify("[Manual]", "All tokens collected", 2)
+        end
+    end)
+
+    secTP:Button("Collect All Dropped Items", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for _, child in ipairs(workspace:GetChildren()) do
+                if child.Name == "AdminAbuseItem" or child.Name == "AdminAbuseBucks" then
+                    local visual = child:FindFirstChild("Visual")
+                    local part = visual and visual:FindFirstChild("Part")
+                    if part and part:IsA("BasePart") then
+                        part.CFrame = hrp.CFrame
+                    end
+                    local col = child:FindFirstChild("Collider")
+                    if col and col:IsA("BasePart") then
+                        col.CFrame = hrp.CFrame
+                    end
+                end
+            end
+            notify("[Manual]", "All dropped items collected", 2)
         end
     end)
 end)
 
-local ScanCooldown = 0.2 
+local ScanCooldown = 0.2
 local player = game.Players.LocalPlayer
 
 function GetBoatTopInstance()
@@ -180,9 +215,7 @@ function GetBoatTopInstance()
     local boat = journeyPass and journeyPass:FindFirstChild("Boat")
     if boat then
         local top = boat:FindFirstChild("Top")
-        if top and top:IsA("BasePart") then
-            return top
-        end
+        if top and top:IsA("BasePart") then return top end
     end
     return nil
 end
@@ -195,10 +228,7 @@ function GetDivePart()
     local journeyParts = journeyPass and journeyPass:FindFirstChild("JourneyParts")
     local week2 = journeyParts and journeyParts:FindFirstChild("Week2")
     local divePart = week2 and week2:FindFirstChild("DivePart")
-    
-    if divePart and divePart:IsA("BasePart") then
-        return divePart
-    end
+    if divePart and divePart:IsA("BasePart") then return divePart end
     return nil
 end
 
@@ -210,12 +240,9 @@ function AreTrashMarkersPresent()
     local journeyParts = journeyPass and journeyPass:FindFirstChild("JourneyParts")
     local week2 = journeyParts and journeyParts:FindFirstChild("Week2")
     local trashMarkersFolder = week2 and week2:FindFirstChild("TrashMarkers")
-    
     if trashMarkersFolder then
         for _, child in ipairs(trashMarkersFolder:GetChildren()) do
-            if child:IsA("BasePart") and child.Transparency < 1 then
-                return true
-            end
+            if child:IsA("BasePart") and child.Transparency < 1 then return true end
         end
     end
     return false
@@ -226,14 +253,37 @@ function GetLadderPart()
     local oceanMinigame = interiors and interiors:FindFirstChild("OceanMinigameInterior")
     local ladder = oceanMinigame and oceanMinigame:FindFirstChild("Ladder")
     local part = ladder and ladder:FindFirstChild("Part")
-    
-    if part and part:IsA("BasePart") then
-        return part
-    end
+    if part and part:IsA("BasePart") then return part end
     return nil
 end
 
 print(textprint)
+
+-- [ DROPPED ITEMS MAGNET LOOP ]
+task.spawn(function()
+    while true do
+        if config.Dropped_Items_AutoFarm then
+            local character = player.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, child in ipairs(workspace:GetChildren()) do
+                    if child.Name == "AdminAbuseItem" or child.Name == "AdminAbuseBucks" then
+                        local visual = child:FindFirstChild("Visual")
+                        local part = visual and visual:FindFirstChild("Part")
+                        if part and part:IsA("BasePart") and part.Parent then
+                            part.CFrame = hrp.CFrame
+                        end
+                        local col = child:FindFirstChild("Collider")
+                        if col and col:IsA("BasePart") and col.Parent then
+                            col.CFrame = hrp.CFrame
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.05)
+    end
+end)
 
 -- [ ANTI-AFK LOOP ]
 task.spawn(function()
@@ -257,24 +307,23 @@ task.spawn(function()
     end
 end)
 
--- [ MAIN LOOP MÁQUINA DE ESTADOS ]
+-- [ MAIN LOOP ]
 task.spawn(function()
     while true do
-        if not config.Beam_AutoFarm and not config.Token_AutoFarm and not config.Trash_AutoFarm and not config.Boat_AutoFarm then 
-            task.wait(0.5) 
-            continue 
+        if not config.Dropped_Items_AutoFarm and not config.Token_AutoFarm and not config.Trash_AutoFarm and not config.Boat_AutoFarm then
+            task.wait(0.5)
+            continue
         end
-        
+
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        
+
         if hrp then
-            
             local ladderPart = GetLadderPart()
             local boatTop = GetBoatTopInstance()
             local divePart = GetDivePart()
 
-            -- [0] FILTRO DE FALSOS POSITIVOS (Doble Chequeo de 1 segundo)
+            -- [0] FILTRO DE FALSOS POSITIVOS
             local isMinigameReady = false
             if config.Trash_AutoFarm and divePart then
                 if AreTrashMarkersPresent() then
@@ -288,16 +337,16 @@ task.spawn(function()
                 end
             end
 
-            -- [ESTADO 1] ADENTRO DEL MINIJUEGO (Recuperación por Fallback)
+            -- [ESTADO 1] ADENTRO DEL MINIJUEGO (Fallback)
             if ladderPart then
-                EventLog("Resuming minigame from inside (Fallback Cycle 1)")
-                
-                -- BOLSAS
+                EventLog("Resuming minigame from inside (Fallback)")
+
                 local isFarmingBags = true
                 local emptyChecks = 0
                 while isFarmingBags and GetLadderPart() do
+                    if GetBoatTopInstance() then cycleInterrupted = true; break end
                     local trashFolder = workspace:FindFirstChild("Trash")
-                    if not trashFolder then 
+                    if not trashFolder then
                         emptyChecks = emptyChecks + 1
                         if emptyChecks >= 15 then isFarmingBags = false; break end
                         task.wait(0.2); continue
@@ -309,8 +358,9 @@ task.spawn(function()
                     end
 
                     if #bags > 0 then
-                        emptyChecks = 0 
+                        emptyChecks = 0
                         for _, bag in ipairs(bags) do
+                            if GetBoatTopInstance() then cycleInterrupted = true; break end
                             if bag and bag.Parent then
                                 local targetPos = nil
                                 if bag:IsA("BasePart") then targetPos = bag.Position
@@ -318,15 +368,12 @@ task.spawn(function()
                                     local primary = bag.PrimaryPart or bag:FindFirstChildWhichIsA("BasePart")
                                     if primary then targetPos = primary.Position end
                                 end
-
                                 if targetPos then
                                     hrp.Velocity = Vector3.new(0, 0, 0)
                                     hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
                                     task.wait(0.1)
                                     if keypress and keyrelease then
-                                        keypress(0x45)
-                                        task.wait(0.02)
-                                        keyrelease(0x45)
+                                        keypress(0x45); task.wait(0.02); keyrelease(0x45)
                                     end
                                     task.wait(0.1)
                                 end
@@ -339,14 +386,12 @@ task.spawn(function()
                     task.wait(0.2)
                 end
 
-                -- MONEDAS
-                -- MONEDAS (scan continuo, re-escanea tras cada recolección)
-                if GetLadderPart() then
-                    EventLog("Waiting 10 seconds for coins...") -- (o 5s en Ciclo 2)
-                    task.wait(10) -- (o 5 en Ciclo 2)
-
+                if not cycleInterrupted and GetLadderPart() then
+                    EventLog("Waiting 10 seconds for coins...")
+                    task.wait(10)
                     local coinScanActive = true
                     while coinScanActive and GetLadderPart() do
+                        if GetBoatTopInstance() then cycleInterrupted = true; break end
                         local found = false
                         for _, child in ipairs(workspace:GetChildren()) do
                             if child.Name == "TokenPickup" then
@@ -358,38 +403,42 @@ task.spawn(function()
                                         hrp.Position = pos + Vector3.new(0, 2.5, 0)
                                         task.wait(config.Token_Cooldown)
                                         found = true
-                                        break -- rompe el for, re-escanea desde cero
+                                        break
                                     end
                                 end
                             end
                         end
-                        if not found then
-                            coinScanActive = false -- no quedaron monedas
-                        end
+                        if not found then coinScanActive = false end
                     end
                     task.wait(2)
                 end
 
-                -- SALIDA
-                EventLog("Minigame finished, teleporting to ladder to exit")
-                while GetLadderPart() do
-                    local currentLadder = GetLadderPart()
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                    hrp.Position = currentLadder.Position + Vector3.new(0, 1.5, 0)
-                    task.wait(1)
-                    PerformSafeClick()
-                    task.wait(2)
+                if not cycleInterrupted then
+                    EventLog("Exiting minigame...")
+                    while GetLadderPart() do
+                        local currentLadder = GetLadderPart()
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                        hrp.Position = currentLadder.Position + Vector3.new(0, 1.5, 0)
+                        task.wait(1)
+                        PerformSafeClick()
+                        task.wait(2)
+                    end
+                else
+                    EventLog("Cycle interrupted by Boat. Returning to main loop.")
+                    cycleInterrupted = false
                 end
-                continue 
+                continue
             end
 
-            -- [ESTADO 2] INICIO DE EVENTO: CICLO DOBLE EXACTO
+            -- [ESTADO 2] CICLO DOBLE
             if isMinigameReady and divePart then
                 EventLog("Minigame confirmed! Starting Double Cycle.")
-                
+                cycleInterrupted = false
+
                 -- ================== CICLO 1 ==================
                 local entryAttempts1 = 0
-                while config.Trash_AutoFarm and not GetLadderPart() and entryAttempts1 < 10 do
+                local entryAttempts1 = 0
+                while config.Trash_AutoFarm and not GetLadderPart() and entryAttempts1 < 3 do
                     local dp = GetDivePart()
                     if dp then
                         hrp.Velocity = Vector3.new(0, 0, 0)
@@ -401,15 +450,16 @@ task.spawn(function()
                     entryAttempts1 = entryAttempts1 + 1
                 end
 
-                if GetLadderPart() then
+                if not cycleInterrupted and GetLadderPart() then
                     EventLog("Cycle 1: Inside successfully.")
-                    task.wait(2) 
+                    task.wait(2)
 
                     local isFarmingBags = true
                     local emptyChecks = 0
                     while isFarmingBags and GetLadderPart() do
+                        if GetBoatTopInstance() then cycleInterrupted = true; break end
                         local trashFolder = workspace:FindFirstChild("Trash")
-                        if not trashFolder then 
+                        if not trashFolder then
                             emptyChecks = emptyChecks + 1
                             if emptyChecks >= 15 then isFarmingBags = false; break end
                             task.wait(0.2); continue
@@ -421,8 +471,9 @@ task.spawn(function()
                         end
 
                         if #bags > 0 then
-                            emptyChecks = 0 
+                            emptyChecks = 0
                             for _, bag in ipairs(bags) do
+                                if GetBoatTopInstance() then cycleInterrupted = true; break end
                                 if bag and bag.Parent then
                                     local targetPos = nil
                                     if bag:IsA("BasePart") then targetPos = bag.Position
@@ -430,15 +481,12 @@ task.spawn(function()
                                         local primary = bag.PrimaryPart or bag:FindFirstChildWhichIsA("BasePart")
                                         if primary then targetPos = primary.Position end
                                     end
-
                                     if targetPos then
                                         hrp.Velocity = Vector3.new(0, 0, 0)
                                         hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
                                         task.wait(0.1)
                                         if keypress and keyrelease then
-                                            keypress(0x45)
-                                            task.wait(0.02)
-                                            keyrelease(0x45)
+                                            keypress(0x45); task.wait(0.02); keyrelease(0x45)
                                         end
                                         task.wait(0.1)
                                     end
@@ -451,11 +499,12 @@ task.spawn(function()
                         task.wait(0.2)
                     end
 
-                    if GetLadderPart() then
+                    if not cycleInterrupted and GetLadderPart() then
                         EventLog("Cycle 1: Bags collected. Waiting 10s for coins.")
                         task.wait(10)
                         local coinScanActive = true
                         while coinScanActive and GetLadderPart() do
+                            if GetBoatTopInstance() then cycleInterrupted = true; break end
                             local found = false
                             for _, child in ipairs(workspace:GetChildren()) do
                                 if child.Name == "TokenPickup" then
@@ -477,23 +526,29 @@ task.spawn(function()
                         task.wait(2)
                     end
 
-                    -- SALIDA CICLO 1
-                    EventLog("Cycle 1: Exiting...")
-                    while GetLadderPart() do
-                        local currentLadder = GetLadderPart()
-                        hrp.Velocity = Vector3.new(0, 0, 0)
-                        hrp.Position = currentLadder.Position + Vector3.new(0, 1.5, 0)
-                        task.wait(1)
-                        PerformSafeClick()
-                        task.wait(2)
+                    if not cycleInterrupted then
+                        EventLog("Cycle 1: Exiting...")
+                        while GetLadderPart() do
+                            local currentLadder = GetLadderPart()
+                            hrp.Velocity = Vector3.new(0, 0, 0)
+                            hrp.Position = currentLadder.Position + Vector3.new(0, 1.5, 0)
+                            task.wait(1)
+                            PerformSafeClick()
+                            task.wait(2)
+                        end
+                    else
+                        -- Nos sacaron antes de llegar a ladder
+                        wasEjectedFromCycle1 = true
                     end
+                end
 
-                    -- ================== CICLO 2 ==================
+                -- ================== CICLO 2 ==================
+                if not cycleInterrupted and not wasEjectedFromCycle1 then
                     EventLog("Cycle 1 complete. Attempting Cycle 2...")
-                    task.wait(2) 
+                    task.wait(2)
 
                     local entryAttempts2 = 0
-                    while config.Trash_AutoFarm and not GetLadderPart() and entryAttempts2 < 10 do
+                    while config.Trash_AutoFarm and not GetLadderPart() and entryAttempts2 < 3 and not AreTrashMarkersPresent() do
                         local dp = GetDivePart()
                         if dp then
                             hrp.Velocity = Vector3.new(0, 0, 0)
@@ -505,16 +560,16 @@ task.spawn(function()
                         entryAttempts2 = entryAttempts2 + 1
                     end
 
-                    if GetLadderPart() then
+                    if not cycleInterrupted and GetLadderPart() then
                         EventLog("Cycle 2: Inside successfully. Starting farm routine.")
                         task.wait(2)
 
-                        -- BOLSAS CICLO 2
                         local isFarmingBags2 = true
                         local emptyChecks2 = 0
                         while isFarmingBags2 and GetLadderPart() do
+                            if GetBoatTopInstance() then cycleInterrupted = true; break end
                             local trashFolder = workspace:FindFirstChild("Trash")
-                            if not trashFolder then 
+                            if not trashFolder then
                                 emptyChecks2 = emptyChecks2 + 1
                                 if emptyChecks2 >= 15 then isFarmingBags2 = false; break end
                                 task.wait(0.2); continue
@@ -526,8 +581,9 @@ task.spawn(function()
                             end
 
                             if #bags > 0 then
-                                emptyChecks2 = 0 
+                                emptyChecks2 = 0
                                 for _, bag in ipairs(bags) do
+                                    if GetBoatTopInstance() then cycleInterrupted = true; break end
                                     if bag and bag.Parent then
                                         local targetPos = nil
                                         if bag:IsA("BasePart") then targetPos = bag.Position
@@ -535,15 +591,12 @@ task.spawn(function()
                                             local primary = bag.PrimaryPart or bag:FindFirstChildWhichIsA("BasePart")
                                             if primary then targetPos = primary.Position end
                                         end
-
                                         if targetPos then
                                             hrp.Velocity = Vector3.new(0, 0, 0)
                                             hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
                                             task.wait(0.1)
                                             if keypress and keyrelease then
-                                                keypress(0x45)
-                                                task.wait(0.02)
-                                                keyrelease(0x45)
+                                                keypress(0x45); task.wait(0.02); keyrelease(0x45)
                                             end
                                             task.wait(0.1)
                                         end
@@ -556,12 +609,12 @@ task.spawn(function()
                             task.wait(0.2)
                         end
 
-                        -- MONEDAS CICLO 2 (Espera reducida a 5 segundos)
-                        if GetLadderPart() then
+                        if not cycleInterrupted and GetLadderPart() then
                             EventLog("Cycle 2: Bags checked. Waiting 5s for coins.")
                             task.wait(5)
                             local coinScanActive = true
                             while coinScanActive and GetLadderPart() do
+                                if GetBoatTopInstance() then cycleInterrupted = true; break end
                                 local found = false
                                 for _, child in ipairs(workspace:GetChildren()) do
                                     if child.Name == "TokenPickup" then
@@ -582,95 +635,86 @@ task.spawn(function()
                             end
                             task.wait(2)
                         end
-                        
-                        -- SALIDA CICLO 2
-                        EventLog("Cycle 2: Exiting...")
-                        while GetLadderPart() do
-                            local currentLadder = GetLadderPart()
-                            hrp.Velocity = Vector3.new(0, 0, 0)
-                            hrp.Position = currentLadder.Position + Vector3.new(0, 1.5, 0)
-                            task.wait(1)
-                            PerformSafeClick()
-                            task.wait(2)
+
+                        if not cycleInterrupted then
+                            EventLog("Cycle 2: Exiting...")
+                            while GetLadderPart() do
+                                local currentLadder = GetLadderPart()
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = currentLadder.Position + Vector3.new(0, 1.5, 0)
+                                task.wait(1)
+                                PerformSafeClick()
+                                task.wait(2)
+                            end
+                            EventLog("Cycle 2 Complete.")
                         end
-                        EventLog("Cycle 2 Complete.")
                     end
                 end
-                continue 
+
+                if cycleInterrupted then
+                    EventLog("Cycle interrupted by Boat. Returning to main loop.")
+                    cycleInterrupted = false
+                end
+                wasEjectedFromCycle1 = false
+                continue
             end
 
-            -- [ESTADO 3 & 4] BOTE, O EVENTO BASE
+            -- [ESTADO 3 & 4] BOTE O EVENTO BASE
             if boatTop or divePart then
-                
-                -- Recolección Global de Monedas y Rayos en MainMap/Event
                 local currentTargets = {}
                 for _, child in ipairs(workspace:GetChildren()) do
-                    if config.Beam_AutoFarm and child.Name == "SmallLightBeam" then
-                        if child:IsA("BasePart") then table.insert(currentTargets, {Part = child, Type = "Beam"})
-                        elseif child:IsA("Model") then
-                            local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
-                            if primary then table.insert(currentTargets, {Part = primary, Type = "Beam"}) end
-                        end
-                    elseif config.Token_AutoFarm and child.Name == "TokenPickup" then
+                    if config.Token_AutoFarm and child.Name == "TokenPickup" then
                         local col = child:FindFirstChild("Collider") or child
-                        -- Usamos el ParentObj (child) para trackear si el token está atascado
-                        if col:IsA("BasePart") and not stuckTokens[child] then 
-                            table.insert(currentTargets, {Part = col, Type = "Token", ParentObj = child}) 
+                        if col:IsA("BasePart") and not stuckTokens[child] then
+                            table.insert(currentTargets, {Part = col, Type = "Token", ParentObj = child})
                         end
                     end
                 end
-                
+
                 if #currentTargets > 0 then
                     for _, item in ipairs(currentTargets) do
-                        if config.Trash_AutoFarm and AreTrashMarkersPresent() then break end 
-                        
+                        if config.Trash_AutoFarm and AreTrashMarkersPresent() then break end
                         local target = item.Part
                         if target and target.Parent and target:IsA("BasePart") then
                             local successPos, targetPos = pcall(function() return target.Position end)
                             if successPos and typeof(targetPos) == "Vector3" then
-                                if item.Type == "Token" then
-                                    
-                                    -- Lógica Anti-Stuck para Tokens
-                                    tokenAttempts[item.ParentObj] = (tokenAttempts[item.ParentObj] or 0) + 1
-                                    if tokenAttempts[item.ParentObj] > 10 then
-                                        stuckTokens[item.ParentObj] = true
-                                        EventLog("Ignored token (stuck/unreachable).")
-                                    end
-                                    
-                                    hrp.Velocity = Vector3.new(0, -10, 0) 
-                                    hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
-                                    task.wait(config.Token_Cooldown)
-                                elseif item.Type == "Beam" then
-                                    hrp.Velocity = Vector3.new(0, 0, 0)
-                                    hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
-                                    task.wait(config.Beam_Cooldown)
+                                tokenAttempts[item.ParentObj] = (tokenAttempts[item.ParentObj] or 0) + 1
+                                if tokenAttempts[item.ParentObj] > 10 then
+                                    stuckTokens[item.ParentObj] = true
+                                    EventLog("Ignored token (stuck/unreachable).")
                                 end
+                                hrp.Velocity = Vector3.new(0, -10, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 2.5, 0)
+                                task.wait(config.Token_Cooldown)
                             end
                         end
                     end
                 else
-                    -- ANCLAJES DE DESCANSO
                     if boatTop and config.Boat_AutoFarm then
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         hrp.Position = boatTop.Position + Vector3.new(0, -0.5, 0)
-                    elseif divePart and config.Idle_TP then 
+                    elseif divePart and config.Idle_TP then
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         hrp.Position = Vector3.new(-353.7116, 32.7624, -1422.9288)
                     end
                 end
-                
+
                 task.wait(0.05)
                 continue
             end
 
-            -- [ESTADO 5] ESTAMOS EN EL MAIN MAP U OTRA ZONA (No Boat, No Dive, No Ladder)
+            -- [ESTADO 5] FUERA DEL MAPA
+            task.wait(3)
+            if GetLadderPart() or GetBoatTopInstance() or GetDivePart() then
+                continue
+            end
             if config.Auto_TP_Event then
                 EventLog("Event Map not detected. Attempting UI navigation to Event...")
                 Tp2Event()
                 task.wait(3)
             else
                 task.wait(1)
-            end 
+            end
         end
         task.wait(ScanCooldown)
     end
