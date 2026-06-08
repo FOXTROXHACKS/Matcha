@@ -1,10 +1,10 @@
-local Duels_Autofarm = true
+local Duels_Autofarm = false
 local Auto_TP_Pad = false
-local Keybind_Use = true 
+local Keybind_Use = false 
 local Cooldown_Duels = 0.05
 
 local lastSeenTime = tick()
-local PadWaitTime = 5
+local PadWaitTime = 3
 local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
 local player = game:GetService("Players").LocalPlayer
 local spawnablesFolder = workspace.Spawnables.SpawnablesClient
@@ -49,7 +49,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if not UI.GetValue("duels_toggle") then continue end
+        if not Duels_Autofarm then continue end
         
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
@@ -65,7 +65,7 @@ task.spawn(function()
         end
 
         local count = #foundItems
-        local isToggled = UI.GetValue("keybind_toggle")
+        local isToggled = Keybind_Use
 
         -- 2. Lógica de Activación (Presionar antes de farmear)
         if count > 0 then
@@ -77,7 +77,7 @@ task.spawn(function()
             
             -- 3. Proceder con el Farmeo
             for _, item in ipairs(foundItems) do
-                if not UI.GetValue("duels_toggle") then break end
+                if not Duels_Autofarm then break end
                 if item.Parent then
                     pcall(function() hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0) end)
                     task.wait(Cooldown_Duels)
@@ -93,7 +93,7 @@ task.spawn(function()
             end
 
             -- Lógica Pad
-            if UI.GetValue("pad_toggle") and PadPath then
+            if Auto_TP_Pad and PadPath then
                 if (tick() - lastPadTP) >= PadWaitTime then
                     pcall(function() 
 						SimClick(1157, 837)
