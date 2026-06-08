@@ -101,6 +101,8 @@ task.spawn(function()
                         
                         -- Ejecutar el click tras el TP
                         SimClick(1652, 473)
+						task.wait(1)
+						SimClick(1157, 837)
                     end)
                     lastPadTP = tick()
                 end
