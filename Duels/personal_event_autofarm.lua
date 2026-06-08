@@ -60,7 +60,7 @@ task.spawn(function()
             lastSeenTime = tick()
             if isToggled and not iskeypressed(0x2D) then
                 keypress(0x2D)
-                task.wait(0.3) -- Espera breve para que el juego registre la tecla antes de mover
+                task.wait(0.5) -- Espera breve para que el juego registre la tecla antes de mover
             end
             
             -- 3. Proceder con el Farmeo
