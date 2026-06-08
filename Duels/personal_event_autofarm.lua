@@ -1,6 +1,6 @@
-local Duels_Autofarm = false
-local Auto_TP_Pad = false
-local Keybind_Use = false 
+local Duels_Autofarm = true
+local Auto_TP_Pad = true
+local Keybind_Use = true 
 local Cooldown_Duels = 0.05
 
 local lastSeenTime = tick()
