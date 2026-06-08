@@ -32,7 +32,19 @@ UI.AddTab("Duels", function(tab)
         Cooldown_Duels = val / 100
     end)
 end)
-
+--functions
+local function SimClick(posx, posy)
+    if mousemoveabs and mouse1click then
+        mousemoveabs(posx, posy)
+        task.wait(0.5)
+        mousemoveabs(posx + 1, posy)
+        task.wait(0.5)
+        mouse1click()
+        print("[LOG] Click ejecutado en: " .. posx .. ", " .. posy)
+    else
+        warn("Las funciones de mouse no están disponibles en este entorno.")
+    end
+end
 -- Main Loop
 task.spawn(function()
     while true do
@@ -83,7 +95,13 @@ task.spawn(function()
             -- Lógica Pad
             if UI.GetValue("pad_toggle") and PadPath then
                 if (tick() - lastPadTP) >= PadWaitTime then
-                    pcall(function() hrp.CFrame = PadPath.CFrame + Vector3.new(0, 3, 0) end)
+                    pcall(function() 
+                        hrp.CFrame = PadPath.CFrame + Vector3.new(0, 3, 0) 
+                        print("[LOG] TP to Pad, performing UI Click...")
+                        
+                        -- Ejecutar el click tras el TP
+                        SimClick(1652, 473)
+                    end)
                     lastPadTP = tick()
                 end
             end
