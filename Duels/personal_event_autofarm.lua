@@ -96,6 +96,7 @@ task.spawn(function()
             if UI.GetValue("pad_toggle") and PadPath then
                 if (tick() - lastPadTP) >= PadWaitTime then
                     pcall(function() 
+						SimClick(1157, 837)
                         hrp.CFrame = PadPath.CFrame + Vector3.new(0, 3, 0) 
                         print("[LOG] TP to Pad, performing UI Click...")
                         
