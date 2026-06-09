@@ -1,5 +1,5 @@
 local PlaceID = game.PlaceId
-
+task.wait(2)
 if PlaceID == 124848751642883 then
     print("[LOG] Script cargado en el lugar correcto (ID: " .. PlaceID .. ")")
     local Duels_Autofarm = true
