@@ -1,9 +1,15 @@
 local PlaceID = game.PlaceId
 task.wait(2)
-if PlaceID == 124848751642883 then
+while task.wait() do
+    if _G.DuelsAutoFarm == true then
+        break
+    end
+end
+
+if PlaceID == 124848751642883 and _G.DuelsAutoFarm then
     print("[LOG] Script cargado en el lugar correcto (ID: " .. PlaceID .. ")")
     local Duels_Autofarm = true
-    local Auto_TP_Pad = true
+    local Auto_Queue = true
     local Keybind_Use = true 
     local Cooldown_Duels = 0.05
     local clickCD = 0.5
@@ -22,8 +28,8 @@ if PlaceID == 124848751642883 then
             Duels_Autofarm = state
             notify("Autofarm", (state and "Enabled" or "Disabled"), 2)
         end)
-        sec:Toggle("pad_toggle", "Auto TP Pad (5s)", Auto_TP_Pad, function(state)
-            Auto_TP_Pad = state
+        sec:Toggle("auto_queue", "Auto Queue", Auto_Queue, function(state)
+            Auto_Queue = state
             notify("Pad TP", (state and "Active" or "Inactive"), 2)
         end)
         sec:Toggle("keybind_toggle", "Enable Keybind Use (Insert)", Keybind_Use, function(state)
@@ -97,7 +103,7 @@ if PlaceID == 124848751642883 then
                 end
     
                 -- Lógica Pad
-                if Auto_TP_Pad then -- Usamos este toggle para activar/desactivar la secuencia
+                if Auto_Queue then -- Usamos este toggle para activar/desactivar la secuencia
                     if (tick() - lastPadTP) >= PadWaitTime then
                         print("[LOG] Iniciando secuencia de clicks...")
                         task.wait(clickCD)
