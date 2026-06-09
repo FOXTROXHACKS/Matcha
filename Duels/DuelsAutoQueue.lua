@@ -1,6 +1,6 @@
 DuelsAutoFarm = true
+task.wait(2)
 
-task.wait(5)
 if DuelsAutoFarm == true then
     print("[LOG] Script Loaded")
     local Duels_Autofarm = true
