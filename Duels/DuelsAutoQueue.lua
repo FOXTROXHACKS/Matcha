@@ -1,6 +1,4 @@
-DuelsAutoFarm = true
 task.wait(2)
-
 
     print("[LOG] Script Loaded")
     local Duels_Autofarm = true
