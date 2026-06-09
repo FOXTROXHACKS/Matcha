@@ -1,12 +1,8 @@
+_G.DuelsAutoFarm = true
 local PlaceID = game.PlaceId
 task.wait(2)
-while task.wait() do
-    if _G.DuelsAutoFarm == true then
-        break
-    end
-end
 
-if PlaceID == 124848751642883 and _G.DuelsAutoFarm then
+if PlaceID == 124848751642883 and _G.DuelsAutoFarm == true then
     print("[LOG] Script cargado en el lugar correcto (ID: " .. PlaceID .. ")")
     local Duels_Autofarm = true
     local Auto_Queue = true
