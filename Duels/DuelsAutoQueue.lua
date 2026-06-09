@@ -6,7 +6,7 @@ if PlaceID == 124848751642883 then
     local Auto_TP_Pad = true
     local Keybind_Use = true 
     local Cooldown_Duels = 0.05
-    
+    local clickCD = 0.5
     local lastSeenTime = tick()
     local PadWaitTime = 3
     --local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
@@ -100,11 +100,11 @@ if PlaceID == 124848751642883 then
                 if Auto_TP_Pad then -- Usamos este toggle para activar/desactivar la secuencia
                     if (tick() - lastPadTP) >= PadWaitTime then
                         print("[LOG] Iniciando secuencia de clicks...")
-                        task.wait(1)
+                        task.wait(clickCD)
                         SimClick(1652, 473)
-            						task.wait(1)
-            						SimClick(1157, 837)
-                        task.wait(0.5)
+            			task.wait(clickCD)
+            			SimClick(1157, 837)
+                        task.wait(clickCD)
                         SimClick(1016, 1474)
                         lastPadTP = tick()
                     end
