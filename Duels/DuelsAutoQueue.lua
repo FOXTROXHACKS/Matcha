@@ -1,7 +1,7 @@
 DuelsAutoFarm = true
 task.wait(2)
 
-if DuelsAutoFarm == true then
+
     print("[LOG] Script Loaded")
     local Duels_Autofarm = true
     local Auto_Queue = true
@@ -113,4 +113,3 @@ if DuelsAutoFarm == true then
             end
         end
     end)
-end
