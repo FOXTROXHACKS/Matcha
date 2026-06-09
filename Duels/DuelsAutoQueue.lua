@@ -1,10 +1,8 @@
 DuelsAutoFarm = true
 
-task.wait(1)
-local PlaceID = game.PlaceId
-
-if PlaceID == 124848751642883 and DuelsAutoFarm == true then
-    print("[LOG] Script cargado en el lugar correcto (ID: " .. PlaceID .. ")")
+task.wait(5)
+if DuelsAutoFarm == true then
+    print("[LOG] Script Loaded")
     local Duels_Autofarm = true
     local Auto_Queue = true
     local Keybind_Use = true 
