@@ -1,0 +1,197 @@
+Lua
+--[[
+[+] Adopt Me AutoFarm GUI V1.2
+[+] [UPDATED] Cleaned version: Kept Token AutoFarm and Beam AutoFarm (Character moves to items).
+[+] [REMOVED] Trash Bags and Boat logic.
+]]
+
+local textprint = "--- ADOPT ME AUTO-FARM V1.2 (Cleaned Version)" 
+local config = {
+    Beam_AutoFarm = false,
+    Beam_Cooldown = 0.05,
+    
+    Token_AutoFarm = true,
+    Token_Cooldown = 0.05,
+    
+    Anti_AFK = false,
+    Anti_AFK_Time = 60,
+    
+    LOGS = false,
+    CoinLogs = false 
+}
+
+-- Eventlog stuff
+local function EventLog(msg, errr)
+    if config.LOGS then
+        if errr == 1 then
+            error("--- [ERR] " .. msg)
+        else
+            warn("--- [LOG] " .. msg)
+        end
+    end
+end
+
+UI.AddTab("AutoFarm", function(tab)
+    local sec = tab:Section("Configuration", "Left")
+    sec:Toggle("token_toggle", "Token/Coins AutoFarm", config.Token_AutoFarm, function(state)
+        config.Token_AutoFarm = state
+    end)
+    sec:SliderInt("token_cooldown", "Token TP Cooldown (ms)", 1, 100, 5, function(val)
+        config.Token_Cooldown = val / 100
+    end)
+    sec:Toggle("beam_toggle", "Light Beam AutoFarm", config.Beam_AutoFarm, function(state)
+        config.Beam_AutoFarm = state
+    end)
+    
+    -- [ SECCIÓN MISC ]
+    local secMisc = tab:Section("MISC", "Right")
+    secMisc:Toggle("logs_toggle", "Enable Event Logs", config.LOGS, function(state)
+        config.LOGS = state
+    end)
+    secMisc:Toggle("coin_logs_toggle", "Detailed Coin Logs", config.CoinLogs, function(state) 
+        config.CoinLogs = state
+    end)
+    secMisc:Toggle("anti_afk_toggle", "Anti-AFK (Jump)", config.Anti_AFK, function(state)
+        config.Anti_AFK = state
+    end)
+    secMisc:SliderInt("anti_afk_time", "Jump Interval (s)", 1, 300, 60, function(val)
+        config.Anti_AFK_Time = val
+    end)
+
+    -- [ BOTONES DE ACCIÓN RÁPIDA ACTUALIZADOS ]
+    local secTP = tab:Section("Instant Actions & TPs", "Right")
+    
+    secTP:Button("TP to Event", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.Position = Vector3.new(-353.7116, 32.7624, -1422.9288)
+            if notify then notify("[Manual TP]", "Teleported to Event!", 5) end
+        end
+    end)
+
+    secTP:Button("TP to Minigame", function()
+        local character = game.Players.LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.Position = Vector3.new(-372.1794, 32.7624, -1424.9301)
+            if notify then notify("[Manual TP]", "Teleported to Minigame!", 5) end
+        end
+    end)
+end)
+
+local ScanCooldown = 0.2 
+local player = game.Players.LocalPlayer
+
+print(textprint)
+
+-- [ ANTI-AFK LOOP ]
+task.spawn(function()
+    local elapsed = 0
+    while true do
+        task.wait(1)
+        if config.Anti_AFK then
+            elapsed = elapsed + 1
+            if elapsed >= config.Anti_AFK_Time then
+                if keypress and keyrelease then
+                    keypress(0x20)
+                    task.wait(0.1)
+                    keyrelease(0x20)
+                    EventLog("- AntiAFK: Jumped")
+                end
+                elapsed = 0
+            end
+        else
+            elapsed = 0
+        end
+    end
+end)
+
+-- [ MAIN FARM LOOP ]
+task.spawn(function()
+    while true do
+        if not config.Beam_AutoFarm and not config.Token_AutoFarm then 
+            task.wait(0.5) 
+            continue 
+        end
+        local character = player.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        
+        if hrp then
+            
+            -- [1] BEAM AUTOFARM LOGIC (TELETRANSPORTA TU PERSONAJE HACIA LOS OBJETOS)
+            if config.Beam_AutoFarm then
+                local beamTargets = {}
+                local allChildren = workspace:GetChildren()
+
+                for i = 1, #allChildren do
+                    local child = allChildren[i]
+                    if child.Name == "AdminAbuseItem" or child.Name == "AdminAbuseBucks" then
+                        local col = child:FindFirstChild("Collider")
+                        local visual = child:FindFirstChild("Visual")
+                        local part = visual and visual:FindFirstChild("Part")
+                        
+                        -- Prioriza el Collider, si no existe, usa la Part visual
+                        if col and col:IsA("BasePart") then
+                            table.insert(beamTargets, col)
+                        elseif part and part:IsA("BasePart") then
+                            table.insert(beamTargets, part)
+                        end
+                    end
+                end
+
+                if #beamTargets > 0 then
+                    for _, target in ipairs(beamTargets) do
+                        if not config.Beam_AutoFarm then break end
+                        
+                        if target and target.Parent and hrp and target:IsA("BasePart") then
+                            local successPos, targetPos = pcall(function() return target.Position end)
+                            if successPos and typeof(targetPos) == "Vector3" then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                task.wait(config.Beam_Cooldown)
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- [2] TOKEN AUTOFARM LOGIC (TELETRANSPORTA TU PERSONAJE)
+            if config.Token_AutoFarm then
+                local currentTargets = {}
+                local allChildren = workspace:GetChildren()
+                
+                for i = 1, #allChildren do
+                    local child = allChildren[i]
+                    if child.Name == "TokenPickup" then
+                        local colliderPart = child:FindFirstChild("Collider")
+                        if colliderPart and colliderPart:IsA("BasePart") then
+                            table.insert(currentTargets, colliderPart)
+                        elseif child:IsA("BasePart") then
+                            table.insert(currentTargets, child)
+                        end
+                    end
+                end
+                
+                if #currentTargets > 0 then
+                    for _, target in ipairs(currentTargets) do
+                        if not config.Token_AutoFarm then break end
+                        
+                        if target and target.Parent and hrp and target:IsA("BasePart") then
+                            local successPos, targetPos = pcall(function() return target.Position end)
+                            if successPos and typeof(targetPos) == "Vector3" then
+                                hrp.Velocity = Vector3.new(0, 0, 0)
+                                hrp.Position = targetPos + Vector3.new(0, 1.5, 0)
+                                task.wait(config.Token_Cooldown)
+                            end
+                        end
+                    end
+                end
+            end
+
+        end
+        task.wait(ScanCooldown)
+    end
+end)
