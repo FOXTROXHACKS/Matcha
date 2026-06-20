@@ -1,4 +1,3 @@
-Lua
 --[[
 [+] Adopt Me AutoFarm GUI V1.2
 [+] [UPDATED] Cleaned version: Kept Token AutoFarm and Beam AutoFarm (Character moves to items).
