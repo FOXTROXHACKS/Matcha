@@ -10,7 +10,7 @@ task.wait(2)
     local PadWaitTime = 3
     --local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
     local player = game:GetService("Players").LocalPlayer
-    local spawnablesFolder = workspace.Spawnables.SpawnablesClient
+    local spawnablesFolder = workspace.SpawnablesClient
     local lastPadTP = 0
     
     -- UI Setup
