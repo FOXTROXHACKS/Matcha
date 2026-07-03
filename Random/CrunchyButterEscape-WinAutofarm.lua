@@ -1,4 +1,4 @@
-local AutoFarmWins = false
+local AutoFarmWins = true
 local player = game:GetService("Players").LocalPlayer
 
 UI.AddTab("Farm", function(tab)
