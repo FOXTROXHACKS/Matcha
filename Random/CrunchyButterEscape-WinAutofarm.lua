@@ -6,23 +6,31 @@ UI.AddTab("Farm", function(tab)
     
     sec:Toggle("win_toggle", "Enable WinButton Farm", AutoFarmWins, function(state)
         AutoFarmWins = state
-        if state then
-            notify("Autofarm", "Enabled", 2)
-        else
-            notify("Autofarm", "Disabled", 2)
-        end
+        notify("Autofarm", (state and "Enabled" or "Disabled"), 2)
     end)
 end)
+
+-- Función para buscar la carpeta de WinButtons sin importar el mundo
+local function getWinButtonsFolder()
+    local mapFolder = game.Workspace:FindFirstChild("Map")
+    if not mapFolder then return nil end
+    
+    -- Recorre los hijos de "Map" (World1, World2, etc.)
+    for _, world in pairs(mapFolder:GetChildren()) do
+        local buttons = world:FindFirstChild("WinButtons")
+        if buttons then
+            return buttons -- Devuelve la primera que encuentre
+        end
+    end
+    return nil
+end
 
 task.spawn(function()
     while true do
         if AutoFarmWins then
             local character = player.Character
             local hrp = character and character:FindFirstChild("HumanoidRootPart")
-
-            local winFolder = game.Workspace:FindFirstChild("Map") and 
-                              game.Workspace.Map:FindFirstChild("World1") and 
-                              game.Workspace.Map.World1:FindFirstChild("WinButtons")
+            local winFolder = getWinButtonsFolder()
 
             if hrp and winFolder then
                 local buttons = winFolder:GetChildren()
@@ -36,8 +44,9 @@ task.spawn(function()
                         task.wait(0.7)
                     end
                 end
+                
                 if AutoFarmWins then
-					          notify("Autofarm", "Finished", 2)
+                    notify("Autofarm", "Finished Cycle", 2)
                     task.wait(5)
                 end
             end
