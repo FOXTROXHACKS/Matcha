@@ -1,6 +1,6 @@
 local Duels_Autofarm = true
 local Auto_Queue = false
-local Keybind_Use = false 
+local Keybind_Use = true 
 local Cooldown_Duels = 0.05
 local clickCD = 0.5
 local lastSeenTime = tick()
@@ -98,7 +98,7 @@ task.spawn(function()
             for _, item in ipairs(foundItems) do
                 if not Duels_Autofarm then break end
                 if item.Parent then
-                    pcall(function() item.CFrame = hrp.CFrame end)
+                    pcall(function() hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0) end)
                     task.wait(Cooldown_Duels)
                 end
                 notify("Autofarm", "Collected item", 2)
