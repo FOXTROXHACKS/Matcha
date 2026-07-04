@@ -1,74 +1,56 @@
 local Duels_Autofarm = true
-local Auto_TP_Pad = false
 local Cooldown_Duels = 0.05
-
-local PadWaitTime = 5
-local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
 local player = game:GetService("Players").LocalPlayer
-local spawnablesFolder = workspace.SpawnablesClient
-local lastPadTP = 0
+
+local spawnablesFolder = nil 
 
 UI.AddTab("Duels", function(tab)
-    local sec = tab:Section("Duels Autofarm - V1.2", "Left")
+    local sec = tab:Section("Duels Autofarm - V1.3", "Left")
     sec:Text("Settings")
+    
     sec:Toggle("duels_toggle", "Enable AutoFarm", Duels_Autofarm, function(state)
         Duels_Autofarm = state
         notify("Autofarm", (state and "Enabled" or "Disabled"), 2)
     end)
-    sec:Toggle("pad_toggle", "Auto TP Pad (5s)", Auto_TP_Pad, function(state)
-        Auto_TP_Pad = state
-        notify("Pad TP", (state and "Active" or "Inactive"), 2)
-    end)
+    
     sec:SliderInt("duels_cooldown", "Collection Delay (ms)", 1, 100, (Cooldown_Duels * 100), function(val)
         Cooldown_Duels = val / 100
     end)
 end)
 
+print("[LOG] Script Loaded")
+
 task.spawn(function()
     while true do
-        if not UI.GetValue("duels_toggle") then 
-            task.wait(0.5) 
-            continue 
-        end
+        task.wait(0.1)
+        if not Duels_Autofarm then continue end
+        
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local folders = spawnablesFolder:GetChildren()
-            local foundItems = {}
-            for _, folder in ipairs(folders) do
-                local cylinder = folder:FindFirstChild("Cylinder")
-                if cylinder and cylinder:IsA("BasePart") then
-                    table.insert(foundItems, cylinder)
-                end
-            end
+        if not hrp then continue end
 
-            if #foundItems > 0 then
-                for _, item in ipairs(foundItems) do
-                    if not UI.GetValue("duels_toggle") then break end
+        spawnablesFolder = workspace:FindFirstChild("SpawnablesClient")
+        if not spawnablesFolder then
+            task.wait(0.5)
+            continue
+        end
 
-                    if item.Parent ~= nil then
-                        pcall(function()
-                            hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0)
-                        end)
-                        task.wait(Cooldown_Duels)
-                    end
-                end
-                lastPadTP = 0
-            else
-                if UI.GetValue("pad_toggle") and PadPath then
-                    local currentTime = tick()
-                    
-                    if (currentTime - lastPadTP) >= PadWaitTime then
-                        pcall(function()
-                            hrp.CFrame = PadPath.CFrame + Vector3.new(0, 3, 0)
-                        end)
-                        print("[MATCHA]: 5s Check - Returning to Pad")
-                        lastPadTP = currentTime
-                    end
-                end
-                task.wait(1)
+        local foundItems = {}
+        for _, folder in ipairs(spawnablesFolder:GetChildren()) do
+            local touchpart = folder:FindFirstChild("Touch")
+            if touchpart and touchpart:IsA("BasePart") then
+                table.insert(foundItems, touchpart)
             end
         end
-        task.wait(0.1)
+
+        if #foundItems > 0 then
+            for _, item in ipairs(foundItems) do
+                if not Duels_Autofarm then break end
+                if item.Parent then
+                    pcall(function() item.CFrame = hrp.CFrame end)
+                    task.wait(Cooldown_Duels)
+                end
+            end
+        end
     end
 end)
