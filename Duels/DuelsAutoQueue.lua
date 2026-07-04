@@ -1,6 +1,4 @@
-task.wait(2)
 
-    print("[LOG] Script Loaded")
     local Duels_Autofarm = true
     local Auto_Queue = true
     local Keybind_Use = true 
@@ -35,6 +33,7 @@ task.wait(2)
             Cooldown_Duels = val / 100
         end)
     end)
+    print("[LOG] Script Loaded")
     --functions
     local function SimClick(posx, posy)
         if mousemoveabs and mouse1click then
