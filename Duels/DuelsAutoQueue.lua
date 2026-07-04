@@ -1,6 +1,6 @@
 local Duels_Autofarm = true
 local Auto_Queue = false
-local Keybind_Use = true 
+local Keybind_Use = false 
 local Cooldown_Duels = 0.05
 local clickCD = 0.5
 local lastSeenTime = tick()
@@ -73,9 +73,9 @@ task.spawn(function()
 
         local foundItems = {}
         for _, folder in ipairs(spawnablesFolder:GetChildren()) do
-            local cylinder = folder:FindFirstChild("Cylinder")
-            if cylinder and cylinder:IsA("BasePart") then
-                table.insert(foundItems, cylinder)
+            local touchpart = folder:FindFirstChild("Touch")
+            if touchpart and touchpart:IsA("BasePart") then
+                table.insert(foundItems, touchpart)
             end
         end
 
@@ -98,7 +98,7 @@ task.spawn(function()
             for _, item in ipairs(foundItems) do
                 if not Duels_Autofarm then break end
                 if item.Parent then
-                    pcall(function() hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0) end)
+                    pcall(function() item.CFrame = hrp.CFrame end)
                     task.wait(Cooldown_Duels)
                 end
                 notify("Autofarm", "Collected item", 2)
