@@ -75,6 +75,7 @@
                 if isToggled and not iskeypressed(0x2D) then
                     task.wait(3)
                     keypress(0x2D)
+                    task.wait(0.2)
                     notify("Autofarm", "Desync has been enabled", 2)
                     task.wait(0.5) -- Espera breve para que el juego registre la tecla antes de mover
                 end
@@ -86,14 +87,16 @@
                         pcall(function() hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0) end)
                         task.wait(Cooldown_Duels)
                     end
-                    notify("Autofarm", "Finished autofarm", 2)
+                    notify("Autofarm", "Collected item", 2)
                 end
+                notify("Autofarm", "Finished", 2)
                 lastPadTP = tick()
             else
                 -- 4. Lógica de Liberación (Solo si no hay monedas)
                 if isToggled and iskeypressed(0x2D) then
                     if (tick() - lastSeenTime) >= 2 then
                         keyrelease(0x2D)
+                        task.wait(0.2)
                         notify("Autofarm", "Desync has been disabled", 2)
                     end
                 end
