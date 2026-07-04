@@ -1,5 +1,5 @@
     local Duels_Autofarm = true
-    local Auto_Queue = true
+    local Auto_Queue = false
     local Keybind_Use = true 
     local Cooldown_Duels = 0.05
     local clickCD = 0.5
