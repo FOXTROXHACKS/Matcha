@@ -70,10 +70,12 @@
     
             -- 2. Lógica de Activación (Presionar antes de farmear)
             if count > 0 then
+                notify("Autofarm", "Foundn event items", 2)
                 lastSeenTime = tick()
                 if isToggled and not iskeypressed(0x2D) then
-                    task.wait(1)
+                    task.wait(3)
                     keypress(0x2D)
+                    notify("Autofarm", "Desync has been enabled", 2)
                     task.wait(0.5) -- Espera breve para que el juego registre la tecla antes de mover
                 end
                 
@@ -84,6 +86,7 @@
                         pcall(function() hrp.CFrame = item.CFrame + Vector3.new(0, 3, 0) end)
                         task.wait(Cooldown_Duels)
                     end
+                    notify("Autofarm", "Finished autofarm", 2)
                 end
                 lastPadTP = tick()
             else
@@ -91,6 +94,7 @@
                 if isToggled and iskeypressed(0x2D) then
                     if (tick() - lastSeenTime) >= 2 then
                         keyrelease(0x2D)
+                        notify("Autofarm", "Desync has been disabled", 2)
                     end
                 end
     
