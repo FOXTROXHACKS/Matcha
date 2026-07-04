@@ -7,7 +7,9 @@ local lastSeenTime = tick()
 local PadWaitTime = 3
 --local PadPath = workspace.PadZones.PadZone5.Pad1.Pad
 local player = game:GetService("Players").LocalPlayer
-local spawnablesFolder = workspace.SpawnablesClient
+
+-- 1. Lo inicializamos en nil para evitar que se rompa al cargar
+local spawnablesFolder = nil 
 local lastPadTP = 0
 
 -- UI Setup
@@ -33,6 +35,7 @@ UI.AddTab("Duels", function(tab)
     end)
 end)
 print("[LOG] Script Loaded")
+
 --functions
 local function SimClick(posx, posy)
     if mousemoveabs and mouse1click then
@@ -46,6 +49,7 @@ local function SimClick(posx, posy)
         warn("Las funciones de mouse no están disponibles en este entorno.")
     end
 end
+
 -- Main Loop
 task.spawn(function()
     while true do
@@ -59,6 +63,14 @@ task.spawn(function()
         -- 1. Escaneo
         task.wait(2)
         print("Starting scan")
+        
+        -- 2. Verificación de seguridad dinámica en cada ciclo
+        spawnablesFolder = workspace:FindFirstChild("SpawnablesClient")
+        if not spawnablesFolder then
+            task.wait(0.5)
+            continue -- Si no existe, pausamos y lo volvemos a intentar sin generar error
+        end
+
         local foundItems = {}
         for _, folder in ipairs(spawnablesFolder:GetChildren()) do
             local cylinder = folder:FindFirstChild("Cylinder")
@@ -70,9 +82,9 @@ task.spawn(function()
         local count = #foundItems
         local isToggled = Keybind_Use
 
-        -- 2. Lógica de Activación (Presionar antes de farmear)
+        -- 3. Lógica de Activación (Presionar antes de farmear)
         if count > 0 then
-            notify("Autofarm", "Foundn event items", 2)
+            notify("Autofarm", "Found event items", 2)
             lastSeenTime = tick()
             if isToggled and not iskeypressed(0x2D) then
                 task.wait(1)
@@ -82,7 +94,7 @@ task.spawn(function()
                 task.wait(0.5) -- Espera breve para que el juego registre la tecla antes de mover
             end
             
-            -- 3. Proceder con el Farmeo
+            -- 4. Proceder con el Farmeo
             for _, item in ipairs(foundItems) do
                 if not Duels_Autofarm then break end
                 if item.Parent then
@@ -94,7 +106,7 @@ task.spawn(function()
             notify("Autofarm", "Finished", 2)
             lastPadTP = tick()
         else
-            -- 4. Lógica de Liberación (Solo si no hay monedas)
+            -- 5. Lógica de Liberación (Solo si no hay monedas)
             if isToggled and iskeypressed(0x2D) then
                 if (tick() - lastSeenTime) >= 2 then
                     keyrelease(0x2D)
