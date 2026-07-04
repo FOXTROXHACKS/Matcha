@@ -57,6 +57,8 @@
             if not hrp then continue end
     
             -- 1. Escaneo
+            task.wait(2)
+            print("Starting scan")
             local foundItems = {}
             for _, folder in ipairs(spawnablesFolder:GetChildren()) do
                 local cylinder = folder:FindFirstChild("Cylinder")
@@ -73,7 +75,7 @@
                 notify("Autofarm", "Foundn event items", 2)
                 lastSeenTime = tick()
                 if isToggled and not iskeypressed(0x2D) then
-                    task.wait(3)
+                    task.wait(1)
                     keypress(0x2D)
                     task.wait(0.2)
                     notify("Autofarm", "Desync has been enabled", 2)
