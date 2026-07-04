@@ -13,8 +13,8 @@ UI.AddTab("Duels", function(tab)
         notify("Autofarm", (state and "Enabled" or "Disabled"), 2)
     end)
     
-    sec:SliderInt("duels_cooldown", "Collection Delay (ms)", 1, 100, (Cooldown_Duels * 100), function(val)
-        Cooldown_Duels = val / 100
+    sec:SliderInt("duels_cooldown", "Collection Delay (Seconds)", 1, 60, (Cooldown_Duels * 10), function(val)
+        Cooldown_Duels = val / 10
     end)
 end)
 
