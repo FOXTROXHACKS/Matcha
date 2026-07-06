@@ -1,6 +1,6 @@
 local TweenService = {}
 
-local EasingFunctions = {
+local EasingFunctions; EasingFunctions = {
     Linear = function(t)
         return t
     end,
