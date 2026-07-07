@@ -1,4 +1,5 @@
-local AutoFarmWins = true
+local AutoFarmWins = false
+local CycleWaitTime = 10
 local player = game:GetService("Players").LocalPlayer
 
 UI.AddTab("Farm", function(tab)
@@ -8,18 +9,19 @@ UI.AddTab("Farm", function(tab)
         AutoFarmWins = state
         notify("Autofarm", (state and "Enabled" or "Disabled"), 2)
     end)
+    sec:SliderInt("cycle_timer", "Cycle Wait (Seconds)", 1, 20, CycleWaitTime, function(val)
+        CycleWaitTime = val
+    end)
 end)
 
--- Función para buscar la carpeta de WinButtons sin importar el mundo
 local function getWinButtonsFolder()
     local mapFolder = game.Workspace:FindFirstChild("Map")
     if not mapFolder then return nil end
     
-    -- Recorre los hijos de "Map" (World1, World2, etc.)
     for _, world in pairs(mapFolder:GetChildren()) do
         local buttons = world:FindFirstChild("WinButtons")
         if buttons then
-            return buttons -- Devuelve la primera que encuentre
+            return buttons
         end
     end
     return nil
@@ -46,8 +48,8 @@ task.spawn(function()
                 end
                 
                 if AutoFarmWins then
-                    notify("Autofarm", "Finished Cycle", 2)
-                    task.wait(5)
+                    notify("Autofarm", "Finished Cycle. Waiting " .. CycleWaitTime .. "s", 2)
+                    task.wait(CycleWaitTime)
                 end
             end
         end
