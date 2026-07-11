@@ -1,3 +1,13 @@
+--[[
+_G.TweenService = loadstring(game:HttpGet("https://raw.githubusercontent.com/FOXTROXHACKS/Matcha/refs/heads/main/MISC/Tween_Service.lua"))()
+local function MoveTo(EndPoint)
+    local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp and _G.TweenService then
+        -- Aquí usas la variable global en lugar de un TweenService local
+        _G.TweenService:Create(hrp, TweenInfo.new(1), {CFrame = EndPoint}):Play()
+    end
+end
+]]
 local TweenService = {}
 
 local EasingFunctions; EasingFunctions = {
