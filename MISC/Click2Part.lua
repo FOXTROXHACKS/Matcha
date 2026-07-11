@@ -3,7 +3,6 @@ local LP = Players.LocalPlayer
 local mouse = LP:GetMouse()
 local ctrl = 0x11
 local debounce = false
-
 while true do
     task.wait(0.05)
     if ismouse1pressed() and iskeypressed(ctrl) and not debounce then
