@@ -4,7 +4,7 @@
 + Tickets Autofarm (updated for event)
 + SafeZone udpate (you can now disable them even before executing UI)
 ]]
-Full_AutoFarm = Full_AutoFarm or true
+Full_AutoFarm = true
 if SafeZone == nil then
 SafeZone = true
 print("safezone nil, toggled true")
