@@ -1,23 +1,25 @@
 --[[
-[+] EVADE AutoFarm GUI v1
-[+] NPC Autofarm (Collects the bee)
-[+] Tickets Autofarm (Collects the Honey)
-[+] SafeZones to not get killed
+[+] EVADE AutoFarm GUI v1.1
+- Removed NPC Autofarm (there's no NPC to collect atm)
++ Tickets Autofarm (updated for event)
++ SafeZone udpate (you can now disable them even before executing UI)
 ]]
-Full_AutoFarm = true
-SafeZone = false
-NPC_AutoFarm = false
+Full_AutoFarm = Full_AutoFarm or true
+SafeZone = SafeZone or true        -- Si es nil, se convertirá automáticamente en true
+--NPC_AutoFarm = NPC_AutoFarm or false
 TP_Cooldown = 0.05
 LOGS = false
 
-UI.AddTab("AutoFarm", function(tab)
-    local sec = tab:Section("Configuration", "Left")
+UI.AddTab("Evade v1.1", function(tab)
+    local sec = tab:Section("Autofarm Config", "Left")
     sec:Toggle("full_autofarm", "Tickets AutoFarm", Full_AutoFarm, function(state)
         Full_AutoFarm = state
     end)
-    sec:Toggle("npc_toggle", "NPC AutoFarm", NPC_AutoFarm, function(state)
+    --[[
+        sec:Toggle("npc_toggle", "NPC AutoFarm", NPC_AutoFarm, function(state)
         NPC_AutoFarm= state
     end)
+        ]]
     sec:Toggle("safezone_toggle", "Safe Zone", SafeZone, function(state)
         SafeZone = state
     end)
