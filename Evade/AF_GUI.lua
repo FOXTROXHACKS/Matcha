@@ -5,7 +5,7 @@
 + SafeZone udpate (you can now disable them even before executing UI)
 ]]
 Full_AutoFarm = Full_AutoFarm or true
-SafeZone = SafeZones or true        -- Si es nil, se convertirá automáticamente en true
+SafeZone = _G.SafeZone ~= nil and _G.SafeZone or true --if nil, it iwll be true
 --NPC_AutoFarm = NPC_AutoFarm or false
 TP_Cooldown = 0.05
 LOGS = false
