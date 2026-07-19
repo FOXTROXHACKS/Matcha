@@ -4,28 +4,28 @@
 [+] Tickets Autofarm (Collects the Honey)
 [+] SafeZones to not get killed
 ]]
-_G.Full_AutoFarm = true
-_G.SafeZone = true
-_G.NPC_AutoFarm = true
-_G.TP_Cooldown = 0.05
-_G.LOGS = false
+Full_AutoFarm = true
+SafeZone = false
+NPC_AutoFarm = false
+TP_Cooldown = 0.05
+LOGS = false
 
 UI.AddTab("AutoFarm", function(tab)
     local sec = tab:Section("Configuration", "Left")
-    sec:Toggle("full_autofarm", "Tickets AutoFarm", _G.Full_AutoFarm, function(state)
-        _G.Full_AutoFarm = state
+    sec:Toggle("full_autofarm", "Tickets AutoFarm", Full_AutoFarm, function(state)
+        Full_AutoFarm = state
     end)
-    sec:Toggle("npc_toggle", "NPC AutoFarm", _G.NPC_AutoFarm, function(state)
-        _G.NPC_AutoFarm = state
+    sec:Toggle("npc_toggle", "NPC AutoFarm", NPC_AutoFarm, function(state)
+        NPC_AutoFarm= state
     end)
-    sec:Toggle("safezone_toggle", "Safe Zone", _G.SafeZone, function(state)
-        _G.SafeZone = state
+    sec:Toggle("safezone_toggle", "Safe Zone", SafeZone, function(state)
+        SafeZone = state
     end)
     sec:SliderInt("tp_cooldown_slider", "TP Cooldown (ms)", 1, 100, 5, function(val)
-        _G.TP_Cooldown = val / 100
+        TP_Cooldown = val / 100
     end)
-    sec:Toggle("logs_toggle", "Position Logs", _G.LOGS, function(state)
-        _G.LOGS = state
+    sec:Toggle("logs_toggle", "Position Logs", LOGS, function(state)
+        LOGS = state
     end)
 end)
 
@@ -50,19 +50,20 @@ print("--- Full AutoFarm LOADED ---")
 
 task.spawn(function()
     while true do
-        if not _G.Full_AutoFarm then task.wait(0.5) continue end
+        if not Full_AutoFarm then task.wait(0.5) continue end
 
         local character = player.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        
-        local gameFolder = workspace:FindFirstChild("Game")
-        local effects = gameFolder and gameFolder:FindFirstChild("Effects")
+        --game.Workspace.Effects.Tickets
+        --local gameFolder = workspace:FindFirstChild("Game")
+        --local effects = gameFolder and gameFolder:FindFirstChild("Effects")
+        local effects = workspace:FindFirstChild("Effects")
         local ticketsFolder = effects and effects:FindFirstChild("Tickets")
         local playersFolder = gameFolder and gameFolder:FindFirstChild("Players")
 
         if hrp then
             local currentTickets = {}
-            local NPC = _G.NPC_AutoFarm and playersFolder and playersFolder:FindFirstChild("Bee")
+            local NPC = NPC_AutoFarm and playersFolder and playersFolder:FindFirstChild("Bee")
             local NPCHRP = NPC and NPC:FindFirstChild("HumanoidRootPart")
 
             if not NPCHRP and ticketsFolder then
@@ -101,20 +102,20 @@ task.spawn(function()
                     end
                 end
             else
-                if _G.SafeZone then
+                if SafeZone then
                     if not esperando then
                         esperando = true
                         recolectando = false
                         currentSafePos = SafePositions[math.random(1, #SafePositions)]
                         print("--- No tickets, returning to Fixed Safe Zone...")
-                        if _G.LOGS == true then
+                        if LOGS == true then
                             print("Position: "..tostring(currentSafePos))
                         end
                         lastPosChange = tick()
                     end
                     if tick() - lastPosChange >= 3 then
                         currentSafePos = SafePositions[math.random(1, #SafePositions)]
-                        if _G.LOGS == true then
+                        if LOGS == true then
                             print("Position: "..tostring(currentSafePos))
                         end
                         lastPosChange = tick()
@@ -131,9 +132,9 @@ task.spawn(function()
         local waitTime = SafeZoneCD
         if recolectando then waitTime = ScanCooldown end
 
-        if _G.NPC_AutoFarm and _G.TP_Cooldown then 
-             local isTracking = _G.NPC_AutoFarm and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-             if isTracking then waitTime = _G.TP_Cooldown end
+        if NPC_AutoFarm and TP_Cooldown then 
+             local isTracking = NPC_AutoFarm and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+             if isTracking then waitTime = TP_Cooldown end
         end
         task.wait(waitTime)
     end
