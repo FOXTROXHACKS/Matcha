@@ -40,11 +40,11 @@ local SafeZoneCD = 0.1
 local TotalTicketsFound = 0
 
 local SafePositions = {
-    Vector3.new(407, 13120, -194),
-    --[[Vector3.new(-230, 280, -200),
+    --Vector3.new(407, 13120, -194),
+    Vector3.new(-230, 280, -200),
     Vector3.new(0, 280, 0),
     Vector3.new(230, 280, 200)
-    ]]
+    
 }
 
 local player = game.Players.LocalPlayer
