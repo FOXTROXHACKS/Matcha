@@ -1,4 +1,5 @@
 --[[
+  AutoFarmSec1:CreateSlider("Max Coins Limit", 10, 50, 40, 0, function(val)
   ===================================================================
   One Protocol 8.8.26_2beta - Matcha Edition (Single Monolithic Script)
   ===================================================================
@@ -9,7 +10,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer and LocalPlayer:GetMouse()
-local DEFAULT_WEBHOOK = "https://discord.com/api/webhooks/1401141876782006465/0216Bd2ePJK-s4HBlrgyGjFBXeqAEttYQ-PqEVUyP3s-45L7VgmcRxAdUhMjRy8TeIAK"
+local DEFAULT_WEBHOOK = "https://discord.com/api/webhooks/1532727847486095422/ePw56To5nqNxhomHM-2zxZZUTmDA9nv1ISGkAz77AapMoE6LJEvsBdIFC7BlUrZEFH2a"
 local function getGlobalWebhook()
   local found = nil
   pcall(function()
@@ -54,7 +55,7 @@ local FarmStats = {
   TotalCoinsAllTime = 0,
   TotalTimeFarmedSeconds = 0,
   SessionCoins = 0,
-  MaxCoins = 40,
+  MaxCoins = 50,
   SessionStartTime = os.clock(),
   LogTotalCoins = true,
   LogSessionCoins = true,
@@ -123,7 +124,7 @@ local function SaveConfigProfile(cfgName)
         Speed = AutoFarmState and AutoFarmState.Speed or 25,
         UndermapSpeed = AutoFarmState and AutoFarmState.UndermapSpeed or 25,
         TeleportCooldown = AutoFarmState and AutoFarmState.TeleportCooldown or 0.3,
-        MaxCoins = AutoFarmState and AutoFarmState.MaxCoins or 40,
+        MaxCoins = AutoFarmState and AutoFarmState.MaxCoins or 50,
         FullBagAction = AutoFarmState and AutoFarmState.FullBagAction or "Reset / Die",
         SafeAvoidEnabled = AutoFarmState and AutoFarmState.SafeAvoidEnabled or false,
         SafeAvoidTarget = AutoFarmState and AutoFarmState.SafeAvoidTarget or "Murderer Only",
@@ -240,7 +241,7 @@ local function BuildWebhookMessage()
   local fields = {
     {
       name = "🪙 Session Coins",
-      value = tostring(FarmStats.SessionCoins or 0) .. " / " .. tostring(FarmStats.MaxCoins or 40),
+      value = tostring(FarmStats.SessionCoins or 0) .. " / " .. tostring(FarmStats.MaxCoins or 50),
       inline = true
     },
     {
@@ -1936,7 +1937,7 @@ local AutoFarmState = {
   TeleportCooldown = 0.3,
   Undermap2Speed = 20,
   Undermap2Freeze = 0.49,
-  MaxCoins = 40,
+  MaxCoins = 50,
   UndermapOffset = 6,
   PickupOffset = 3,
   Undermap2Offset = 4.0,
@@ -2507,7 +2508,7 @@ task.spawn(function()
         pcall(function()
           coins = tonumber(plr.PlayerGui.MainGUI.Game.CoinBags.Container.Coin.CurrencyFrame.Icon.Coins.Text) or 0
         end)
-        if coins >= (AutoFarmState.MaxCoins or 40) then
+        if coins >= (AutoFarmState.MaxCoins or 50) then
           if AutoFarmState.FullBagAction == "Stay Under Map" then
             local safePos = Vector3.new(1.94, -97.21, 15.65)
             setPosAndLook(safePos, nil)
@@ -4090,7 +4091,7 @@ task.spawn(function()
           end
         end
         if lbls.SessionCoins and lbls.SessionCoins.SetText then
-          lbls.SessionCoins:SetText("- Session Coins: " .. tostring(FarmStats.SessionCoins or 0) .. " / " .. tostring(FarmStats.MaxCoins or 40))
+          lbls.SessionCoins:SetText("- Session Coins: " .. tostring(FarmStats.SessionCoins or 0) .. " / " .. tostring(FarmStats.MaxCoins or 50))
         end
         if lbls.AllTimeCoins and lbls.AllTimeCoins.SetText then
           lbls.AllTimeCoins:SetText("- All-Time Coins: " .. tostring(FarmStats.TotalCoinsAllTime or 0))
@@ -4155,7 +4156,7 @@ function UI_BUILDERS.buildAutoFarmTab()
     AutoFarmState.TeleportCooldown = val
   end)
   teleportCooldownSlider.IsHidden = true
-  AutoFarmSec1:CreateSlider("Max Coins Limit", 10, 40, 40, 0, function(val)
+  AutoFarmSec1:CreateSlider("Max Coins Limit", 10, 50, 40, 0, function(val)
     AutoFarmState.MaxCoins = val
     FarmStats.MaxCoins = val
   end)
@@ -4167,7 +4168,7 @@ function UI_BUILDERS.buildAutoFarmTab()
   SafeSec:CreateToggle("Enable Safe Avoidance", false, function(state)
     AutoFarmState.SafeAvoidEnabled = state
   end)
-  SafeSec:CreateDropdown("Avoid Target Filter", { "Murderer Only", "Murderer & Sheriff", "All Players" }, "Murderer Only", function(targetFilter)
+  SafeSec:CreateDropdown("Avoid Target Filter", { "Murderer Only", "Murderer & Sheriff", "All Players" }, "Murderer & Sheriff", function(targetFilter)
     AutoFarmState.SafeAvoidTarget = targetFilter
   end)
   SafeSec:CreateSlider("Avoid Danger Radius (m)", 5, 50, 20, 0, function(val)
