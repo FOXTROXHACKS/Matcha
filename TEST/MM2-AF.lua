@@ -241,7 +241,7 @@ local function BuildWebhookMessage()
   local fields = {
     {
       name = "🪙 Session Coins",
-      value = tostring(FarmStats.SessionCoins or 0) .. " / " .. tostring(FarmStats.MaxCoins or 50),
+      value = tostring(FarmStats.SessionCoins or 0),-- .. " / ", .. tostring(FarmStats.MaxCoins or 50),
       inline = true
     },
     {
