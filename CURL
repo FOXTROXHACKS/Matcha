@@ -1,1 +1,2 @@
 curl -A "Roblox/WinInet" "URL"
+curl -L -i -A "Roblox/WinInet" "URL"
