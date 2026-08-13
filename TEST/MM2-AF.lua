@@ -4156,7 +4156,7 @@ function UI_BUILDERS.buildAutoFarmTab()
     AutoFarmState.TeleportCooldown = val
   end)
   teleportCooldownSlider.IsHidden = true
-  AutoFarmSec1:CreateSlider("Max Coins Limit", 10, 50, 40, 0, function(val)
+  AutoFarmSec1:CreateSlider("Max Coins Limit", 10, 50, 50, 0, function(val)
     AutoFarmState.MaxCoins = val
     FarmStats.MaxCoins = val
   end)
