@@ -27,7 +27,7 @@ end
 local userProvidedWebhook = getGlobalWebhook()
 local initialWebhook = userProvidedWebhook or DEFAULT_WEBHOOK
 local hasUserWebhook = (userProvidedWebhook ~= nil and #userProvidedWebhook > 15)
-local STATS_FILE = "one_protocol_stats.json"
+local STATS_FILE = "one_protocol_stats_" .. (LocalPlayer and tostring(LocalPlayer.UserId) or "Guest") .. ".json"
 local CONFIG_INDEX_FILE = "one_protocol_configs_index.json"
 local function SaveFileNative(path, content)
   pcall(function()
