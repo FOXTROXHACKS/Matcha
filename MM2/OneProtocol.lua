@@ -28,7 +28,7 @@ end
 local userProvidedWebhook = getGlobalWebhook()
 local initialWebhook = userProvidedWebhook or DEFAULT_WEBHOOK
 local hasUserWebhook = (userProvidedWebhook ~= nil and #userProvidedWebhook > 15)
-local STATS_FILE = "one_protocol_stats.json"
+local STATS_FILE = "one_protocol_stats_" .. (LocalPlayer and tostring(LocalPlayer.UserId) or "Guest") .. ".json"
 local CONFIG_INDEX_FILE = "one_protocol_configs_index.json"
 local function SaveFileNative(path, content)
   pcall(function()
@@ -3753,7 +3753,7 @@ task.spawn(function()
                 elseif el.Type == "Input" then
                   if isVisibleInFrame and IsHover(mX, mY, secX + 8, elemY, colW - 16, 17) then
                     clickedAnyInput = true
-                    SetFocus(el)
+                    SetFocus(el) --AutoPegarWebhook
                     local clipText = GetClipboardText()
                     if clipText and (clipText:lower():find("http") or clipText:lower():find("discord")) then
                       el.Value = clipText
@@ -4068,7 +4068,7 @@ function UI_BUILDERS.buildInfoTab()
   LibraryData.StatusLabels.Murd = MatchSec:CreateLabel("- Murderer: Searching...", Colors.TextDim)
   LibraryData.StatusLabels.Sheriff = MatchSec:CreateLabel("- Sheriff: Searching...", Colors.TextDim)
   LibraryData.StatusLabels.GunDrop = MatchSec:CreateLabel("- Gun Dropped: NO", Colors.Red)
-  LibraryData.StatusLabels.SessionCoins = MatchSec:CreateLabel("- Session Coins: 0 / " .. tostring(FarmStats.MaxCoins or 40), Colors.TextActive)
+  LibraryData.StatusLabels.SessionCoins = MatchSec:CreateLabel("- Session Coins: 0", Colors.TextActive)--[ .. tostring(FarmStats.MaxCoins or 40)]
   LibraryData.StatusLabels.AllTimeCoins = MatchSec:CreateLabel("- All-Time Coins: " .. tostring(FarmStats.TotalCoinsAllTime or 0), Colors.Accent)
 end
 
@@ -4106,7 +4106,7 @@ task.spawn(function()
           end
         end
         if lbls.SessionCoins and lbls.SessionCoins.SetText then
-          lbls.SessionCoins:SetText("- Session Coins: " .. tostring(FarmStats.SessionCoins or 0) .. " / " .. tostring(FarmStats.MaxCoins or 50))
+          lbls.SessionCoins:SetText("- Session Coins: " .. tostring(FarmStats.SessionCoins or 0))--.. " / " .. tostring(FarmStats.MaxCoins or 50)
         end
         if lbls.AllTimeCoins and lbls.AllTimeCoins.SetText then
           lbls.AllTimeCoins:SetText("- All-Time Coins: " .. tostring(FarmStats.TotalCoinsAllTime or 0))
