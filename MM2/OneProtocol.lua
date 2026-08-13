@@ -1,4 +1,4 @@
-local DEFAULT_WEBHOOK = "https://discord.com/api/webhooks/1532727847486095422/ePw56To5nqNxhomHM-2zxZZUTmDA9nv1ISGkAz77AapMoE6LJEvsBdIFC7BlUrZEFH2a"
+--local DEFAULT_WEBHOOK = "https://discord.com/api/webhooks/1532727847486095422/ePw56To5nqNxhomHM-2zxZZUTmDA9nv1ISGkAz77AapMoE6LJEvsBdIFC7BlUrZEFH2a"
 --[[
   ===================================================================
   One Protocol 8.8.26_2beta - Matcha Edition (Single Monolithic Script)
