@@ -2200,6 +2200,7 @@ local function getMapCenterPos()
 end
 local can = true
 local coins = 0
+local previousCoins = 0
 local firstpos = nil
 local firstcframe = nil
 local function magnitude(a, b)
@@ -2508,6 +2509,19 @@ task.spawn(function()
         pcall(function()
           coins = tonumber(plr.PlayerGui.MainGUI.Game.CoinBags.Container.Coin.CurrencyFrame.Icon.Coins.Text) or 0
         end)
+        -- [NUEVO CAMBIO] Lógica de sumatoria para Estadísticas y Webhooks
+        if coins > previousCoins then
+            local gained = coins - previousCoins
+            
+            -- Sanity check: Evita sumar bugs visuales si la UI de MM2 falla y da un salto irreal
+            if gained <= 50 then
+                FarmStats.SessionCoins = (FarmStats.SessionCoins or 0) + gained
+                FarmStats.TotalCoinsAllTime = (FarmStats.TotalCoinsAllTime or 0) + gained
+                SaveStats() -- Guarda en tu archivo .json automáticamente
+            end
+        end
+        -- Actualizamos siempre para el siguiente frame (incluso si baja a 0 por nueva ronda)
+        previousCoins = coins
         if coins >= (AutoFarmState.MaxCoins or 50) then
           if AutoFarmState.FullBagAction == "Stay Under Map" then
             local safePos = Vector3.new(1.94, -97.21, 15.65)
