@@ -9,7 +9,7 @@ if SafeZone == nil then
 SafeZone = true
 print("safezone nil, toggled true")
 end
---NPC_AutoFarm = NPC_AutoFarm or false
+NPC_AutoFarm = NPC_AutoFarm or false
 TP_Cooldown = 0.05
 LOGS = false
 
@@ -18,11 +18,9 @@ UI.AddTab("Evade v1.1", function(tab)
     sec:Toggle("full_autofarm", "Tickets AutoFarm", Full_AutoFarm, function(state)
         Full_AutoFarm = state
     end)
-    --[[
         sec:Toggle("npc_toggle", "NPC AutoFarm", NPC_AutoFarm, function(state)
         NPC_AutoFarm= state
     end)
-        ]]
     sec:Toggle("safezone_toggle", "Safe Zone", SafeZone, function(state)
         SafeZone = state
     end)
@@ -70,9 +68,9 @@ task.spawn(function()
 
         if hrp then
             local currentTickets = {}
-            local NPC = NPC_AutoFarm and playersFolder and playersFolder:FindFirstChild("Bee")
+            local NPC = NPC_AutoFarm and playersFolder and playersFolder:FindFirstChild("Glorp Cat")
             local NPCHRP = NPC and NPC:FindFirstChild("HumanoidRootPart")
-
+--Glorp Cat
             if not NPCHRP and ticketsFolder then
                 local allChildren = ticketsFolder:GetChildren()
                 for i = 1, #allChildren do
