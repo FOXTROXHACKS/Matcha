@@ -1,5 +1,5 @@
 --[[
-[+] EVADE AutoFarm GUI v1.1
+[+] EVADE AutoFarm GUI v1.2
 - Removed NPC Autofarm (there's no NPC to collect atm)
 + Tickets Autofarm (updated for event)
 + SafeZone udpate (you can now disable them even before executing UI)
@@ -13,7 +13,7 @@ NPC_AutoFarm = NPC_AutoFarm or false
 TP_Cooldown = 0.05
 LOGS = false
 
-UI.AddTab("Evade v1.1", function(tab)
+UI.AddTab("Evade v1.2", function(tab)
     local sec = tab:Section("Autofarm Config", "Left")
     sec:Toggle("full_autofarm", "Tickets AutoFarm", Full_AutoFarm, function(state)
         Full_AutoFarm = state
