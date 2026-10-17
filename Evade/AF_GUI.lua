@@ -5,11 +5,12 @@
 + SafeZone udpate (you can now disable them even before executing UI)
 ]]
 Full_AutoFarm = true
+NPC_AutoFarm = true
 if SafeZone == nil then
 SafeZone = true
 print("safezone nil, toggled true")
 end
-NPC_AutoFarm = NPC_AutoFarm or false
+
 TP_Cooldown = 0.05
 LOGS = false
 
@@ -70,7 +71,7 @@ task.spawn(function()
             local currentTickets = {}
             local NPC = NPC_AutoFarm and playersFolder and playersFolder:FindFirstChild("Glorp Cat")
             local NPCHRP = NPC and NPC:FindFirstChild("HumanoidRootPart")
---Glorp Cat
+--game.Workspace.Players.Glorp Cat.HumanoidRootPart
             if not NPCHRP and ticketsFolder then
                 local allChildren = ticketsFolder:GetChildren()
                 for i = 1, #allChildren do
