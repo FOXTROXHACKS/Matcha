@@ -21,7 +21,7 @@ task.spawn(function()
         local playersFolder = gameFolder and gameFolder:FindFirstChild("Players")
         
         if hrp then
-            local NPC = playersFolder and playersFolder:FindFirstChild("Glorp Cat") or playersFolder:FindFirstChild("Glorp Cat Rover")
+            local NPC = playersFolder and playersFolder:FindFirstChild("Glorp Cat")-- or playersFolder:FindFirstChild("Glorp Cat Rover") or playersFolder:FindFirstChild("Glorp Cat UFO")
             local NPC_HRP = NPC and NPC:FindFirstChild("HumanoidRootPart")
             if NPC_HRP then
                 if not siguiendoANPC then
