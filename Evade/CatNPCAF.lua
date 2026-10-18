@@ -21,7 +21,11 @@ task.spawn(function()
         local playersFolder = gameFolder and gameFolder:FindFirstChild("Players")
         
         if hrp then
-            local NPC = playersFolder and playersFolder:FindFirstChild("Glorp Cat")-- or playersFolder:FindFirstChild("Glorp Cat Rover") or playersFolder:FindFirstChild("Glorp Cat UFO")
+            local NPC = playersFolder and (
+                    playersFolder:FindFirstChild("Glorp Cat") or 
+                    playersFolder:FindFirstChild("Glorp Cat Rover") or 
+                    playersFolder:FindFirstChild("Glorp Cat UFO")
+                )
             local NPC_HRP = NPC and NPC:FindFirstChild("HumanoidRootPart")
             if NPC_HRP then
                 if not siguiendoANPC then
@@ -33,6 +37,7 @@ task.spawn(function()
                     hrp.Position = NPC_HRP.Position + Vector3.new(0, 2, 0)
                 end)
             else
+                    --[[
                 if not enZonaSegura then
                     print("--- NPC not found, returning to Fixed Safe Zone...")
                     enZonaSegura = true
@@ -40,6 +45,7 @@ task.spawn(function()
                 end
                 hrp.Position = FixedSafePos
                 hrp.Velocity = Vector3.new(0, 0.2, 0)
+                    ]]
             end
         end
         task.wait(siguiendoANPC and TP_Cooldown or SafeZoneCD)
