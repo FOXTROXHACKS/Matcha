@@ -23,7 +23,8 @@ task.spawn(function()
         if hrp then
             local NPC = playersFolder and playersFolder:FindFirstChild("Glorp Cat")-- or playersFolder:FindFirstChild("Glorp Cat")
             local NPC_HRP = NPC and NPC:FindFirstChild("HumanoidRootPart")
-            if NPC_HRP then                if not siguiendoANPC then
+            if NPC_HRP then
+                if not siguiendoANPC then
                     print("--- NPC found! teleporting..")
                     siguiendoANPC = true
                     enZonaSegura = false
