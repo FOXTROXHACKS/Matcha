@@ -15,8 +15,8 @@ local visited = {}
 local lastNoChestNotify = 0
 local lastStatusPrint = 0
 
-UI.AddTab("Cofres", function(tab)
-    local sec = tab:Section("Hello Kitty Cafe - Auto Cofres", "Left")
+UI.AddTab("AutoChests", function(tab)
+    local sec = tab:Section("Hello Kitty Cafe - Auto Chest", "Left")
     sec:Text("Settings")
     sec:Toggle("chest_toggle", "Enable AutoFarm", Chest_Autofarm, function(state)
         Chest_Autofarm = state
@@ -37,7 +37,6 @@ local function getRoot()
     return char:FindFirstChild("HumanoidRootPart")
 end
 
--- Devuelve: tapa, cofre, cantidad total de cofres en el mapa
 local function getNextLid()
     local folder = workspace:FindFirstChild("TreasureEntity")
     if not folder then return nil, nil, 0 end
@@ -74,8 +73,6 @@ task.spawn(function()
         if not root or not isrbxactive() then continue end
 
         local lid, chest, count = getNextLid()
-
-        -- Print de estado cada 60s
         if (tick() - lastStatusPrint) >= PRINT_INTERVAL then
             lastStatusPrint = tick()
             if count > 0 then
@@ -86,9 +83,8 @@ task.spawn(function()
         end
 
         if not lid then
-            -- Aviso de "no hay cofres" con cooldown de 2 minutos
             if count == 0 then
-                visited = {} -- limpia direcciones viejas
+                visited = {}
                 if (tick() - lastNoChestNotify) >= NO_CHEST_NOTIFY_COOLDOWN then
                     lastNoChestNotify = tick()
                     notify("There's no more chests at this moment", "Auto Cofres", 4)
