@@ -2,6 +2,9 @@ local Chest_Autofarm = true
 local WAIT_TIME = 4
 local TP_Height = 3
 
+
+local NO_CHEST_NOTIFY_COOLDOWN = 120
+local PRINT_INTERVAL = 60
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local F_KEY = 0x46
@@ -9,6 +12,8 @@ local F_KEY = 0x46
 setrobloxinput(true)
 
 local visited = {}
+local lastNoChestNotify = 0
+local lastStatusPrint = 0
 
 UI.AddTab("Cofres", function(tab)
     local sec = tab:Section("Hello Kitty Cafe - Auto Cofres", "Left")
@@ -32,24 +37,32 @@ local function getRoot()
     return char:FindFirstChild("HumanoidRootPart")
 end
 
+-- Devuelve: tapa, cofre, cantidad total de cofres en el mapa
 local function getNextLid()
     local folder = workspace:FindFirstChild("TreasureEntity")
-    if not folder then return nil end
+    if not folder then return nil, nil, 0 end
 
-    local found = false
+    local count = 0
+    local nextLid, nextChest
+
     for _, chest in ipairs(folder:GetChildren()) do
         local lid = chest:FindFirstChild("TreasureLid")
         if lid then
-            found = true
-            if not visited[chest.Address] then
-                return lid, chest
+            count = count + 1
+            if not nextLid and not visited[chest.Address] then
+                nextLid, nextChest = lid, chest
             end
         end
     end
-    if found then
+
+    if nextLid then
+        return nextLid, nextChest, count
+    end
+
+    if count > 0 then
         visited = {}
     end
-    return nil
+    return nil, nil, count
 end
 
 task.spawn(function()
@@ -60,8 +73,27 @@ task.spawn(function()
         local root = getRoot()
         if not root or not isrbxactive() then continue end
 
-        local lid, chest = getNextLid()
+        local lid, chest, count = getNextLid()
+
+        -- Print de estado cada 60s
+        if (tick() - lastStatusPrint) >= PRINT_INTERVAL then
+            lastStatusPrint = tick()
+            if count > 0 then
+                print("[LOG] Chests found: " .. count)
+            else
+                print("[LOG] No chests found")
+            end
+        end
+
         if not lid then
+            -- Aviso de "no hay cofres" con cooldown de 2 minutos
+            if count == 0 then
+                visited = {} -- limpia direcciones viejas
+                if (tick() - lastNoChestNotify) >= NO_CHEST_NOTIFY_COOLDOWN then
+                    lastNoChestNotify = tick()
+                    notify("There's no more chests at this moment", "Auto Cofres", 4)
+                end
+            end
             task.wait(0.4)
             continue
         end
