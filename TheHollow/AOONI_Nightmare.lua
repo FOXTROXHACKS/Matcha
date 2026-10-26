@@ -93,9 +93,9 @@ task.spawn(function()
             task.wait(TP_Delay)
         else
             if total > 0 then
-                --print("[LOG] Vuelta completa (" .. total .. " calabazas). Reiniciando...")
+                print("[LOG] Done (" .. total .. " pumpkins). Rescanning...")
             else
-                --print("[LOG] No se encontraron calabazas")
+                print("[LOG] No more pumpkins found.")
             end
             visited = {}
             task.wait(Rescan_Delay)
