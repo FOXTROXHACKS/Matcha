@@ -1,5 +1,5 @@
 local Pumpkin_TP = true
-local TP_Delay = 1
+local TP_Delay = 0.5
 local TP_Height = 3
 local Rescan_Delay = 5
 local E_KEY = 0x45
@@ -84,7 +84,7 @@ task.spawn(function()
             pcall(function()
                 root.Position = part.Position + Vector3.new(0, TP_Height, 0)
             end)
-            task.wait(0.2)
+            task.wait(0.1)
             keypress(E_KEY)
             task.wait(0.1)
             keyrelease(E_KEY)
