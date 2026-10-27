@@ -1,6 +1,6 @@
-local TP_Height = 3     -- height above the key
-local Door_Height = 0   -- height above the door
-local Key_Delay = 1     -- seconds to wait at the key before going to the door
+local TP_Height = 3
+local Door_Height = 0
+local Key_Delay = 1
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
 
@@ -11,7 +11,6 @@ end
 
 local keeper = workspace:FindFirstChild("GameKeeper")
 
--- Step 1: TP once to the nearest HollowKey
 local root = getRoot()
 local map = keeper and keeper:FindFirstChild("Map")
 local items = map and map:FindFirstChild("Items")
