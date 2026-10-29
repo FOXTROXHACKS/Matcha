@@ -1,152 +1,120 @@
-local Candy_TP = true         -- habilitado por defecto
-local TP_Delay = 0.2           -- segundos de espera en cada candy
-local TP_Height = 3           -- altura sobre el candy
-local Rescan_Delay = 5        -- segundos entre búsquedas cuando no hay candy
-local NO_CANDY_COOLDOWN = 120 -- segundos entre avisos de "no hay candy"
-local KEYWORD = "candy"
-local SPAWNS_FOLDER_NAME = "LootSpawns"
-local MAX_DEPTH = 3           -- hasta qué nivel dentro de workspace buscar la carpeta
-local SEARCH_WHOLE_WORKSPACE = false -- true = si no existe la carpeta, busca "candy" en todo workspace (más pesado)
-local E_KEY = 0x45
+local TP_Delay = 0.2
+
+local MODES = {
+    { name = "Candy",           folder = "LootSpawns",           keyword = "candy" },
+    { name = "Red Balloon",     folder = "HalloweenDecorations", keyword = "redballoon" },
+    { name = "Direwick Ticket", folder = "LootSpawns",           keyword = "direwick_ticket", once = true },
+}
+local mode = 1
+local wasEnabled = true
+local visited = {}
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
-local visited = {}
-local lastNotify = 0
-local lastScan = 0
-local spawnFolders = {}
 
-UI.AddTab("Candy", function(tab)
-    local sec = tab:Section("Candy Collector", "Left")
+local names = {}
+for i, m in ipairs(MODES) do names[i] = m.name end
+
+UI.AddTab("Collector", function(tab)
+    local sec = tab:Section("Collector", "Left")
     sec:Text("Settings")
-    sec:Toggle("candy_toggle", "Enable Candy TP", Candy_TP, function(state)
-        Candy_TP = state
-        if state then visited = {} end
-        notify("Candy TP", (state and "Enabled" or "Disabled"), 2)
-    end)
-    sec:SliderInt("candy_delay", "Delay at each candy (ds)", 1, 50, math.floor(TP_Delay * 10), function(val)
-        TP_Delay = val / 10
-    end)
-    sec:SliderInt("candy_height", "Height offset", 0, 10, TP_Height, function(val)
-        TP_Height = val
-    end)
+    sec:Toggle("collect_enabled", "Enable Collector", true)
+    sec:Combo("collect_mode", "Collect", names, 0)
 end)
 
-local function getRoot()
-    local char = LocalPlayer.Character
-    return char and char:FindFirstChild("HumanoidRootPart")
+local function isPart(d)
+    if d:IsA("BasePart") then return true end
+    local c = d.ClassName
+    return c == "MeshPart" or c == "Part" or c == "UnionOperation"
 end
 
-local function getPos(obj)
-    local ok, pos = pcall(function() return obj.Position end)
-    if ok and pos then return pos end
+local function partOf(obj)
+    if isPart(obj) then return obj end
+    local head = obj:FindFirstChild("Head")
+    if head and isPart(head) then return head end
+    for _, d in ipairs(obj:GetDescendants()) do
+        if isPart(d) then return d end
+    end
     return nil
 end
-
--- Busca todas las carpetas "LootSpawns", sin importar en qué mapa estén
-local function findSpawnFolders()
-    local found = {}
-
-    local function scan(parent, depth)
-        local ok, children = pcall(function() return parent:GetChildren() end)
-        if not ok or not children then return end
-        for _, child in ipairs(children) do
-            if child.Name == SPAWNS_FOLDER_NAME then
-                table.insert(found, child)
-            elseif depth < MAX_DEPTH then
-                scan(child, depth + 1)
+local function collect(cfg)
+    local list, seen = {}, {}
+    for _, map in ipairs(workspace:GetChildren()) do
+        local folder = map:FindFirstChild(cfg.folder)
+        if folder then
+            for _, d in ipairs(folder:GetDescendants()) do
+                local n = (d.Name:lower():gsub("%s+", ""))
+                if n:find(cfg.keyword, 1, true) then
+                    local part = partOf(d)
+                    if part and not seen[part.Address] then
+                        seen[part.Address] = true
+                        table.insert(list, part)
+                    end
+                end
             end
         end
-    end
-
-    scan(workspace, 1)
-    return found
-end
-
-local function scanFolders()
-    spawnFolders = findSpawnFolders()
-    lastScan = tick()
-    visited = {}
-
-    if #spawnFolders > 0 then
-        local names = {}
-        for _, f in ipairs(spawnFolders) do
-            local p = f.Parent
-            names[#names + 1] = p and p.Name or "?"
-        end
-        print("[LOG] " .. SPAWNS_FOLDER_NAME .. " found in: " .. table.concat(names, ", "))
-    else
-        print("[LOG] " .. SPAWNS_FOLDER_NAME .. " not found")
-    end
-end
-
-local function collectFrom(container, list)
-    local ok, descendants = pcall(function() return container:GetDescendants() end)
-    if not ok or not descendants then return end
-    for _, d in ipairs(descendants) do
-        if d.Name:lower():find(KEYWORD, 1, true) and getPos(d) then
-            table.insert(list, d)
-        end
-    end
-end
-
-local function getCandies()
-    local list = {}
-    for _, folder in ipairs(spawnFolders) do
-        collectFrom(folder, list)
-    end
-    -- Si no hay carpeta y está activado, busca en todo el workspace
-    if #spawnFolders == 0 and SEARCH_WHOLE_WORKSPACE then
-        collectFrom(workspace, list)
     end
     return list
 end
 
-print("[LOG] Candy TP loaded")
-scanFolders()
+print("[LOG] Collector loaded")
 
 while true do
     task.wait(0.1)
-    if not Candy_TP then continue end
+    local okE, en = pcall(UI.GetValue, "collect_enabled")
+    local enabled = (not okE) or en == nil or en == true
+    if enabled ~= wasEnabled then
+        wasEnabled = enabled
+        visited = {}
+        notify("Collector", (enabled and "Enabled" or "Disabled"), 2)
+    end
+    if not enabled then continue end
+    local okV, idx = pcall(UI.GetValue, "collect_mode")
+    local newMode = (okV and type(idx) == "number" and MODES[idx + 1]) and (idx + 1) or 1
+    if newMode ~= mode then
+        mode = newMode
+        visited = {}
+        notify("Collecting: " .. MODES[mode].name, "Collector", 2)
+    end
 
-    local root = getRoot()
-    if not root or not isrbxactive() then continue end
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then continue end
 
-    local candies = getCandies()
+    local cfg = MODES[mode]
+    local items = collect(cfg)
 
-    -- Sin candy: puede que el mapa haya cambiado, así que vuelve a buscar la carpeta
-    if #candies == 0 and (tick() - lastScan) >= Rescan_Delay then
-        scanFolders()
-        candies = getCandies()
+    -- Modo "una vez": no vuelve a ir al mismo objeto hasta que desaparezca y reaparezca
+    if cfg.once then
+        local present = {}
+        for _, p in ipairs(items) do present[p.Address] = true end
+        for addr in pairs(visited) do
+            if not present[addr] then visited[addr] = nil end
+        end
     end
 
     local best, bestDist = nil, math.huge
-    for _, c in ipairs(candies) do
-        if not visited[c.Address] then
-            local d = (c.Position - root.Position).Magnitude
+    for _, p in ipairs(items) do
+        if not visited[p.Address] then
+            local d = (p.Position - root.Position).Magnitude
             if d < bestDist then
-                best, bestDist = c, d
+                best, bestDist = p, d
             end
         end
     end
 
     if best then
-        pcall(function()
-            root.Position = best.Position + Vector3.new(0, TP_Height, 0)
-        end)
-        task.wait(0.2)
-  
+        pcall(function() root.Position = best.Position end)
         visited[best.Address] = true
         task.wait(TP_Delay)
     else
-        if #candies > 0 then
-            print("[LOG] Round complete (" .. #candies .. " candy). Restarting...")
-            visited = {}
+        if #items == 0 then
+            print("[LOG] No " .. cfg.name .. " found")
+            task.wait(2)
+        elseif cfg.once then
+            task.wait(1)
         else
-            if (tick() - lastNotify) >= NO_CANDY_COOLDOWN then
-                lastNotify = tick()
-                notify("There's no candy at this moment", "Candy TP", 4)
-            end
+            visited = {}
+            task.wait(1)
         end
-        task.wait(Rescan_Delay)
     end
 end
